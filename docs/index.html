@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LATENT — Results</title>
+<style>
+  :root{
+    --bg: #f3f4f1; --surface: #ffffff; --surface-2: #eceee9;
+    --ink: #1a2130; --ink-soft: #4c5566; --ink-faint: #7c8493;
+    --accent: #24406b; --accent-soft: #dbe4ef;
+    --accent-2: #a6672b; --accent-2-soft: #f0e2d2;
+    --rule: #d9dbd3; --shadow: 0 1px 2px rgba(26,33,48,0.06), 0 8px 24px rgba(26,33,48,0.05);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg: #12161c; --surface: #181e27; --surface-2: #1f2630;
+      --ink: #e8eae4; --ink-soft: #a7aeb8; --ink-faint: #757e8a;
+      --accent: #86aede; --accent-soft: #223349;
+      --accent-2: #dc9c5a; --accent-2-soft: #3a2c1c;
+      --rule: #2a3139; --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.35);
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body{
+    background: var(--bg); color: var(--ink);
+    font-family: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+    line-height: 1.6; -webkit-font-smoothing: antialiased;
+  }
+  h1,h2,h3{ font-family: "Newsreader", ui-serif, Georgia, serif; text-wrap: balance; font-weight: 600; }
+  a { color: var(--accent); }
+  img { max-width: 100%; display: block; }
+
+  .shell{ max-width: 1180px; margin: 0 auto; padding-inline: clamp(16px, 4vw, 48px); padding-block: 40px 96px; }
+
+  header.hero{ border-bottom: 1px solid var(--rule); padding-block-end: 24px; margin-block-end: 28px; }
+  .kicker{ font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent-2); margin: 0 0 10px; }
+  h1.title{ font-size: clamp(1.9rem, 3.2vw, 2.6rem); margin: 0 0 12px; letter-spacing: -0.01em; }
+  .dek{ max-width: 66ch; color: var(--ink-soft); font-size: 1.02rem; margin: 0 0 20px; }
+
+  .linkrow{ display: flex; flex-wrap: wrap; gap: 10px; }
+  .linkrow a{
+    text-decoration: none; font-size: 0.88rem; font-weight: 500;
+    background: var(--surface); border: 1px solid var(--rule); border-radius: 8px;
+    padding: 9px 14px; color: var(--ink); box-shadow: var(--shadow);
+  }
+  .linkrow a.primary{ background: var(--accent); color: white; border-color: var(--accent); }
+  .linkrow a span.tag{ color: var(--ink-faint); font-family: "IBM Plex Mono", monospace; font-size: 0.76rem; margin-left: 6px; }
+
+  .note{
+    border-left: 3px solid var(--accent-2); background: var(--accent-2-soft);
+    border-radius: 0 8px 8px 0; padding: 10px 14px; font-size: 0.88rem;
+    color: var(--ink); margin-block: 26px;
+  }
+
+  section.gallery h2{ font-size: 1.5rem; margin: 0 0 6px; }
+  section.gallery > p{ color: var(--ink-soft); margin: 0 0 22px; font-size: 0.95rem; }
+
+  .grid{ display: grid; grid-template-columns: 1fr; gap: 20px; }
+  figure{
+    margin: 0; background: var(--surface); border: 1px solid var(--rule);
+    border-radius: 12px; overflow: hidden; box-shadow: var(--shadow);
+  }
+  figure img{ width: 100%; }
+  figcaption{ padding: 14px 18px 18px; }
+  figcaption .cap-title{ font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+  figcaption .cap-body{ color: var(--ink-soft); font-size: 0.86rem; }
+
+  footer{
+    margin-block-start: 36px; padding-block-start: 18px; border-top: 1px solid var(--rule);
+    color: var(--ink-faint); font-size: 0.8rem; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+  }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,500;0,600;1,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+</head>
+<body>
+<div class="shell">
+
+  <header class="hero">
+    <p class="kicker">LATENT — results &amp; methodology</p>
+    <h1 class="title">Preliminary Results</h1>
+    <p class="dek">A macro-factor research pipeline (5 Fama-French + 9 macro PCA factors) and a factor-based
+      portfolio benchmarking pipeline, both run end-to-end on this repo's committed data. Charts below are read
+      straight off that data — nothing here is illustrative-only.</p>
+
+    <div class="linkrow">
+      <a class="primary" href="factor-pipeline-math.html">Interactive methodology <span class="tag">HTML · live math</span></a>
+      <a href="factor-pipeline-math.pdf">Whitepaper <span class="tag">PDF</span></a>
+      <a href="project-architecture-map.md">Architecture map <span class="tag">MD</span></a>
+      <a href="https://github.com/akirp002/LATENT">Source <span class="tag">GitHub</span></a>
+    </div>
+  </header>
+
+  <div class="note">
+    <strong>Portfolio data note:</strong> the portfolio charts below run on a fabricated demo portfolio
+    (<code>generate_sample_holdings.py</code>) — fake accounts, tickers, and dollar values, not real holdings —
+    exercised through the real benchmark/tracking-error pipeline so the numbers are internally consistent, just not real.
+  </div>
+
+  <section class="gallery">
+    <h2>Factor diagnostics</h2>
+    <p>From the 14-factor macro panel (<code>python-projects/</code>) — collinearity, and which factors carry real cross-sectional signal.</p>
+    <div class="grid">
+      <figure>
+        <img src="assets/vif_by_factor.png" alt="Variance Inflation Factor per factor, all under 2.2">
+        <figcaption>
+          <div class="cap-title">Variance Inflation Factor, all 14 factors</div>
+          <div class="cap-body">Highest VIF is 2.17 (Mkt-RF) — nowhere near the conventional 5–10 collinearity flag. Rules out shared-variance inflation as a cause of weak-looking betas elsewhere in the pipeline.</div>
+        </figcaption>
+      </figure>
+      <figure>
+        <img src="assets/tau_shrinkage_by_factor.png" alt="Empirical Bayes tau-hat per factor">
+        <figcaption>
+          <div class="cap-title">Empirical-Bayes τ̂ by factor</div>
+          <div class="cap-body">Cross-sectional dispersion in each factor's beta, net of estimation noise, pooled across 33 asset-class ETFs. Five factors (CMA, Credit_Risk, Rates_Yields, US/Global_Monetary_Policy) come back at τ̂≈0 — their observed spread is fully explained by noise, not real signal.</div>
+        </figcaption>
+      </figure>
+      <figure>
+        <img src="assets/hac_vs_ols_significance.png" alt="Count of significant assets, OLS vs HAC standard errors">
+        <figcaption>
+          <div class="cap-title">HAC vs. OLS significance counts</div>
+          <div class="cap-body">Newey–West correction for autocorrelation barely moves the picture (16 of 462 asset–factor pairs flip one way, 10 the other) — ruling out serial correlation as the source of the weak factors identified above.</div>
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="gallery" style="margin-top:40px;">
+    <h2>Sample portfolio benchmark</h2>
+    <p>From the demo tracking-error pipeline (<code>portfolio-mgmt-demo/</code>) — a fabricated portfolio against the constructed 60/40 Mkt-RF/RMW strategic benchmark.</p>
+    <div class="grid">
+      <figure>
+        <img src="assets/portfolio_wealth_curve.png" alt="Growth of $1, sample portfolio vs benchmark">
+        <figcaption>
+          <div class="cap-title">Growth of $1 — sample portfolio vs. benchmark</div>
+          <div class="cap-body">The concentrated PLTR position drives the full portfolio far from both the benchmark and its own ex-concentrated version, which tracks the benchmark closely.</div>
+        </figcaption>
+      </figure>
+      <figure>
+        <img src="assets/tracking_error_comparison.png" alt="Ex-ante vs ex-post tracking error, full vs ex-concentrated portfolio">
+        <figcaption>
+          <div class="cap-title">Tracking error: ex-ante vs. ex-post</div>
+          <div class="cap-body">Dropping the single concentrated position cuts realized tracking error from ~36% to ~4% — the regression-based ex-ante estimate (15.8%) undershoots the realized number for the full portfolio, since it only prices systematic FF5 exposure drift, not idiosyncratic single-stock risk.</div>
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <footer>
+    <span>LATENT — factor research engine + portfolio benchmarking pipeline</span>
+    <span>All figures computed from this repo's own committed data</span>
+  </footer>
+
+</div>
+</body>
+</html>
