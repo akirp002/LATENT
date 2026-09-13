@@ -1,0 +1,38 @@
+                            OLS Regression Results                            
+==============================================================================
+Dep. Variable:       Portfolio_Return   R-squared:                       0.786
+Model:                            OLS   Adj. R-squared:                  0.773
+Method:                 Least Squares   F-statistic:                     92.60
+Date:                Sun, 13 Sep 2026   Prob (F-statistic):           7.20e-86
+Time:                        12:30:38   Log-Likelihood:                 541.66
+No. Observations:                 244   AIC:                            -1053.
+Df Residuals:                     229   BIC:                            -1001.
+Df Model:                          14                                         
+Covariance Type:                  HAC                                         
+=================================================================================================
+                                    coef    std err          z      P>|z|      [0.025      0.975]
+-------------------------------------------------------------------------------------------------
+const                            -0.0012      0.003     -0.450      0.653      -0.006       0.004
+Mkt-RF                            0.9022      0.050     18.200      0.000       0.805       0.999
+SMB                               0.1488      0.059      2.516      0.012       0.033       0.265
+HML                               0.1889      0.096      1.977      0.048       0.002       0.376
+RMW                               0.0605      0.095      0.636      0.525      -0.126       0.247
+CMA                               0.1860      0.109      1.714      0.087      -0.027       0.399
+US_Growth_Factor                 -0.0143      0.004     -3.228      0.001      -0.023      -0.006
+Global_Growth_Factor              0.0005      0.002      0.207      0.836      -0.004       0.005
+Inflation_Factor                 -0.0006      0.001     -0.439      0.661      -0.004       0.002
+Rates_Yields_Factor               0.0018      0.002      0.965      0.335      -0.002       0.005
+US_Monetary_Policy_Factor         0.0022      0.002      1.005      0.315      -0.002       0.006
+Global_Monetary_Policy_Factor    -0.0054      0.003     -1.561      0.118      -0.012       0.001
+Currency_Factor                   0.0010      0.001      0.801      0.423      -0.001       0.003
+Credit_Risk_Factor               -0.0078      0.004     -2.204      0.028      -0.015      -0.001
+Commodities_Factor                0.0034      0.002      1.501      0.133      -0.001       0.008
+==============================================================================
+Omnibus:                       37.062   Durbin-Watson:                   1.026
+Prob(Omnibus):                  0.000   Jarque-Bera (JB):              162.708
+Skew:                          -0.476   Prob(JB):                     4.66e-36
+Kurtosis:                       6.886   Cond. No.                         171.
+==============================================================================
+
+Notes:
+[1] Standard Errors are heteroscedasticity and autocorrelation robust (HAC) using 4 lags and without small sample correction

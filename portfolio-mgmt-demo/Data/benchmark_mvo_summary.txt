@@ -1,0 +1,37 @@
+Benchmark MVO Construction Summary
+===================================
+
+Sample: 2006-01-01 -> 2026-06-01 (246 monthly obs)
+Factors: ['Mkt-RF', 'SMB', 'HML', 'RMW', 'CMA']
+Constraints: long-only, sum(w)=1, Mkt-RF in [60%, 70%]
+Objective: maximize Sharpe ratio, full-sample (unshrunk) covariance
+
+Optimized weights (fixed at inception, never rebalanced):
+Mkt-RF    0.6
+SMB       0.0
+HML       0.0
+RMW       0.4
+CMA       0.0
+
+Expected (static) annualized TOTAL return: 8.9163%
+Expected (static) annualized excess return: 7.2665%
+Expected (static) annualized vol:    9.2043%
+Expected (static) Sharpe:            0.7895
+
+Realized buy-and-hold performance (no rebalancing):
+  CAGR: 9.2955%
+  Annualized Volatility: 9.9539%
+  Annualized Arithmetic Mean Return: 9.4515%
+  Sharpe Ratio (vs avg RF): 0.7838
+  Max Drawdown: -19.8786%
+  N_Months: 246
+
+Gut-check vs. expected 8-12% CAGR: PASSES
+
+Active-tilt (RF-excluded) relative weights, start vs end:
+         Start     End
+Mkt-RF  0.6087  0.8537
+SMB     0.0000  0.0000
+HML     0.0000  0.0000
+RMW     0.3913  0.1463
+CMA     0.0000  0.0000

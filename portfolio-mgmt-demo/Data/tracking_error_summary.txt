@@ -1,0 +1,24 @@
+Tracking Error Summary
+=======================
+
+*** Portfolio return series is SYNTHETIC/PLACEHOLDER -- see the 
+module docstring in benchmark_tracking_error_model.py to swap in 
+a real one. ***
+
+Sample: 2006-03-01 -> 2026-06-01 (244 monthly obs)
+Factors: ['Mkt-RF', 'SMB', 'HML', 'RMW', 'CMA', 'US_Growth_Factor', 'Global_Growth_Factor', 'Inflation_Factor', 'Rates_Yields_Factor', 'US_Monetary_Policy_Factor', 'Global_Monetary_Policy_Factor', 'Currency_Factor', 'Credit_Risk_Factor', 'Commodities_Factor']
+
+Ex-post realized TE (full sample):        2.6336% monthly / 9.1232% annualized
+Ex-ante TE (Ledoit-Wolf, FF5 style drift vs. policy):  1.0847% monthly / 3.7575% annualized
+  (sample-covariance version, for comparison):   3.4049% annualized
+Ledoit-Wolf shrinkage intensity: 0.0634
+
+Rolling 12-mo realized TE: min 2.6675%, max 22.7485%, latest 5.7886%
+
+Current vs policy (long-run average) factor exposure delta (db):
+        Current  Policy   Delta
+Mkt-RF   0.8516  0.9182 -0.0666
+SMB      0.0510  0.1261 -0.0751
+HML      0.5258  0.1686  0.3573
+RMW      0.1326  0.0648  0.0678
+CMA     -0.3849  0.1877 -0.5726
