@@ -46,7 +46,7 @@ Inputs:
   - Data\holdings_monthly_returns.csv   (from fetch_holdings_prices.py)
   - Data\benchmark_mvo_weights.csv      (from construct_benchmark_mvo.py)
   - Data\benchmark_wealth_curve.csv     (from construct_benchmark_mvo.py)
-  - ..\python-projects\Data\FF_plus_macro_workable.csv  (FF5 + RF)
+  - ..\factor-research\Data\FF_plus_macro_workable.csv  (FF5 + RF)
 
 Outputs (Data\ folder):
   - holding_betas.csv                 per-ticker FF5 betas, t-stats, R2, N_Obs
@@ -61,7 +61,7 @@ import numpy as np
 import pandas as pd
 import statsmodels.api as sm
 
-PROJECTS_DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "python-projects", "Data")
+PROJECTS_DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "factor-research", "Data")
 FF_PATH = os.path.join(PROJECTS_DATA_DIR, "FF_plus_macro_workable.csv")
 OUT_DIR = os.path.join(os.path.dirname(__file__), "Data")
 

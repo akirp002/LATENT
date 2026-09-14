@@ -19,7 +19,7 @@ Method
 ------
 1.  Factors: reuse the FF5 + macro PCA factor set from
     quant_model_macro_2.py (Data/FF_plus_macro_workable.csv +
-    Data/macro_pca_factors.csv in the "python-projects" folder).
+    Data/macro_pca_factors.csv in the "factor-research" folder).
 2.  Benchmark construction (returns-based style regression):
     fit  Portfolio_t = alpha + sum_k beta_k * Factor_k,t + eps_t
     by full-sample OLS (HAC/Newey-West SEs). The fitted, alpha-stripped part
@@ -56,9 +56,9 @@ Method
     ex-post also picks up idiosyncratic noise and the macro-factor-driven
     part of the residual.
 
-Inputs (from the "python-projects" pipeline):
-  - ..\python-projects\Data\FF_plus_macro_workable.csv
-  - ..\python-projects\Data\macro_pca_factors.csv
+Inputs (from the "factor-research" pipeline):
+  - ..\factor-research\Data\FF_plus_macro_workable.csv
+  - ..\factor-research\Data\macro_pca_factors.csv
 
 Outputs (Data\ folder next to this script):
   - synthetic_portfolio_returns.csv     the placeholder portfolio return series
@@ -78,7 +78,7 @@ import pandas as pd
 import statsmodels.api as sm
 from sklearn.covariance import LedoitWolf
 
-PROJECTS_DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "python-projects", "Data")
+PROJECTS_DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "factor-research", "Data")
 FF_PATH = os.path.join(PROJECTS_DATA_DIR, "FF_plus_macro_workable.csv")
 MACRO_PATH = os.path.join(PROJECTS_DATA_DIR, "macro_pca_factors.csv")
 

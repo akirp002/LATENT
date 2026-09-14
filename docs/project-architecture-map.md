@@ -1,6 +1,6 @@
 # Project Architecture Map
 
-How `python-projects/` and `portfolio-mgmt-demo/` relate, what depends on
+How `factor-research/` and `portfolio-benchmarking/` relate, what depends on
 what, and how to actually run them. Written as a companion to
 `quant_agent_guidelines.md` (that file is the coding-style/judgment rules;
 this file is the concrete map of scripts, data files, and run order).
@@ -16,20 +16,20 @@ complexity that guidance tells you to avoid until there's a real reason
 
 ## The two projects, in one sentence each
 
-- **`python-projects/`** — the *research engine*: builds a general-purpose
+- **`factor-research/`** — the *research engine*: builds a general-purpose
   macro + Fama-French factor panel and fits exploratory models against it
   (PCA, VAR, factor regressions, VIF/HAC diagnostics, and a Bayesian
   shrinkage / time-varying-parameter track).
-- **`portfolio-mgmt-demo/`** — a *portfolio benchmarking and tracking-error
+- **`portfolio-benchmarking/`** — a *portfolio benchmarking and tracking-error
   pipeline*, demonstrated on a fabricated sample portfolio. It **consumes**
-  the factor panel `python-projects/` produces rather than rebuilding it.
+  the factor panel `factor-research/` produces rather than rebuilding it.
 
-So the relationship is one-directional: `portfolio-mgmt-demo` imports data
-from `python-projects/Data/`, nothing flows the other way.
+So the relationship is one-directional: `portfolio-benchmarking` imports data
+from `factor-research/Data/`, nothing flows the other way.
 
 ---
 
-## `python-projects/` — pipeline stages
+## `factor-research/` — pipeline stages
 
 ```
 fetch_macro_fred.py ─┐
@@ -90,7 +90,7 @@ tvp_ffbs_gibbs.py
 
 ---
 
-## `portfolio-mgmt-demo/` — pipeline stages
+## `portfolio-benchmarking/` — pipeline stages
 
 **All data in this folder is fabricated** — `generate_sample_holdings.py`
 builds a synthetic two-account portfolio (made-up tickers, weights, and
@@ -111,13 +111,13 @@ fetch_holdings_prices.py
   -> Data\holdings_monthly_returns.csv
         │
         v
-construct_benchmark_mvo.py  <───────── ..\python-projects\Data\FF_plus_macro_workable.csv (FF5 + RF)
+construct_benchmark_mvo.py  <───────── ..\factor-research\Data\FF_plus_macro_workable.csv (FF5 + RF)
   max-Sharpe long-only weights over the 5 FF factors (60-70% Mkt-RF constraint)
   -> Data\benchmark_mvo_weights.csv, Data\benchmark_wealth_curve.csv,
      Data\benchmark_effective_weights.csv, Data\benchmark_mvo_summary.txt
         │
         v
-portfolio_factor_exposures.py  <────── ..\python-projects\Data\FF_plus_macro_workable.csv (FF5 + RF)
+portfolio_factor_exposures.py  <────── ..\factor-research\Data\FF_plus_macro_workable.csv (FF5 + RF)
   per-holding FF5 regressions (HAC) -> portfolio-level exposure (full &
   ex-concentrated-position) -> benchmark exposure -> active exposure ->
   ex-ante TE (analytic) and ex-post TE (realized wealth-curve comparison)
@@ -128,8 +128,8 @@ portfolio_factor_exposures.py  <────── ..\python-projects\Data\FF_pl
 ### B. Synthetic-portfolio tracking-error model (separate prototype)
 
 ```
-benchmark_tracking_error_model.py  <── ..\python-projects\Data\FF_plus_macro_workable.csv
-                                    <── ..\python-projects\Data\macro_pca_factors.csv
+benchmark_tracking_error_model.py  <── ..\factor-research\Data\FF_plus_macro_workable.csv
+                                    <── ..\factor-research\Data\macro_pca_factors.csv
   *** uses its OWN separately-fabricated synthetic portfolio
       (build_synthetic_portfolio), independent of pipeline A's sample
       holdings *** -- exercises the rolling-beta / Ledoit-Wolf /
@@ -153,7 +153,7 @@ model — right now both A and B run on fabricated data by design.
 **Run order for pipeline A:** `generate_sample_holdings.py` →
 `fetch_holdings_prices.py` → `construct_benchmark_mvo.py` →
 `portfolio_factor_exposures.py`. Steps 3 and 4 both independently read the
-FF5 columns straight from `..\python-projects\Data\FF_plus_macro_workable.csv`
+FF5 columns straight from `..\factor-research\Data\FF_plus_macro_workable.csv`
 — that file has to exist (i.e., `transform_data_ff.py` must have been run in
 the other project) before either will run.
 
@@ -161,7 +161,7 @@ the other project) before either will run.
 
 ## Cross-project dependency summary
 
-| Consumer (portfolio-mgmt-demo) | Depends on (python-projects/Data/) |
+| Consumer (portfolio-benchmarking) | Depends on (factor-research/Data/) |
 |---|---|
 | `construct_benchmark_mvo.py` | `FF_plus_macro_workable.csv` (FF5 + RF only) |
 | `portfolio_factor_exposures.py` | `FF_plus_macro_workable.csv` (FF5 + RF only) |
@@ -169,7 +169,7 @@ the other project) before either will run.
 | `fetch_holdings_prices.py` | conceptually mirrors `pull_yfinance_data.py`'s conventions, no file dependency |
 
 The dependency is entirely on **one file** in practice for the active
-pipeline (A): `FF_plus_macro_workable.csv`. Nothing in `portfolio-mgmt-demo`
+pipeline (A): `FF_plus_macro_workable.csv`. Nothing in `portfolio-benchmarking`
 reads the macro PCA factors, the VAR output, the asset-class regressions
 (`quant_model_macro_3/4.py`), or `vif_check.py`/`tvp_ffbs_gibbs.py` — those
 stay purely inside the research project, at least for now.
@@ -179,7 +179,7 @@ built (e.g. a new FF vintage, a different `transform_data_ff.py` cleaning
 step), pipeline A's benchmark and tracking-error numbers silently change too
 on the next run — there's no version pin or snapshot between the two
 projects, just a live path reference
-(`PROJECTS_DATA_DIR = ../python-projects/Data`). Worth being deliberate
+(`PROJECTS_DATA_DIR = ../factor-research/Data`). Worth being deliberate
 about re-running pipeline A after any upstream change, rather than assuming
 it's insulated.
 
@@ -204,7 +204,7 @@ Per `quant_agent_guidelines.md` §1 and §6: not yet, on the research side —
 this is still exploratory, run-on-demand work, and a Makefile/Airflow DAG
 here would be exactly the premature machinery that guidance warns against.
 
-**Where I'd draw the line differently**: if `portfolio-mgmt-demo`'s pipeline
+**Where I'd draw the line differently**: if `portfolio-benchmarking`'s pipeline
 A ever gets pointed at a real, live portfolio, it's worth treating as closer
 to the **production track** — real account-level data and a number someone
 relies on deserve two things this repo doesn't yet have: (1) a single

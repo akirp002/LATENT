@@ -18,8 +18,8 @@ import numpy as np
 import pandas as pd
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PY_DATA = os.path.join(ROOT, "python-projects", "Data")
-PORT_DATA = os.path.join(ROOT, "portfolio-mgmt-demo", "Data")
+PY_DATA = os.path.join(ROOT, "factor-research", "Data")
+PORT_DATA = os.path.join(ROOT, "portfolio-benchmarking", "Data")
 OUT_DIR = os.path.join(ROOT, "docs", "assets")
 os.makedirs(OUT_DIR, exist_ok=True)
 

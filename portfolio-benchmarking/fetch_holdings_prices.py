@@ -3,7 +3,7 @@ fetch_holdings_prices.py
 
 Downloads monthly adjusted-close prices for every unique ticker in the
 sample holdings (Data\holdings_tickers.txt) via yfinance, converts to
-monthly percent returns (same convention as ..\python-projects\pull_yfinance_data.py
+monthly percent returns (same convention as ..\factor-research\pull_yfinance_data.py
 -- percent, not decimal, to match the FF factor file's scale before the
 regression step divides everything by 100), and saves one wide CSV.
 

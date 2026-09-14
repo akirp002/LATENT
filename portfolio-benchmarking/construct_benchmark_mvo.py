@@ -47,7 +47,7 @@ Method
     for a mostly-equity long-only benchmark over this sample).
 
 Inputs:
-  - ..\python-projects\Data\FF_plus_macro_workable.csv  (FF5 + RF)
+  - ..\factor-research\Data\FF_plus_macro_workable.csv  (FF5 + RF)
 
 Outputs (Data\ folder next to this script):
   - benchmark_mvo_weights.csv       the single fixed weight vector
@@ -62,7 +62,7 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
 
-PROJECTS_DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "python-projects", "Data")
+PROJECTS_DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "factor-research", "Data")
 FF_PATH = os.path.join(PROJECTS_DATA_DIR, "FF_plus_macro_workable.csv")
 OUT_DIR = os.path.join(os.path.dirname(__file__), "Data")
 
