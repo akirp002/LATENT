@@ -27,9 +27,10 @@ This repo answers that in two stages:
 
 `factor-research/` does stage 1 (the general-purpose research engine);
 `portfolio-benchmarking/` does stage 2, consuming stage 1's output rather
-than rebuilding it. See
+than rebuilding it. See [`docs/HOW_IT_WORKS.md`](docs/HOW_IT_WORKS.md) for
+a module-by-module walkthrough of what each script does and why,
 [`docs/project-architecture-map.md`](docs/project-architecture-map.md) for
-exactly how each script's output feeds the next, and
+the dependency diagram and exact run order, and
 [`docs/factor-pipeline-math.html`](docs/factor-pipeline-math.html) for the
 math behind each stage.
 
