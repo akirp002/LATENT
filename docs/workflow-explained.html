@@ -1,0 +1,543 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LATENT_V2 — Quant and Data Workflow Explained</title>
+<style>
+  :root {
+    --bg:#f3f4f1; --surface:#fff; --surface2:#eceee9; --ink:#1a2130;
+    --muted:#596273; --faint:#7c8493; --blue:#24406b; --blue-soft:#dbe4ef;
+    --orange:#a6672b; --orange-soft:#f0e2d2; --rule:#d9dbd3;
+    --shadow:0 1px 2px rgba(26,33,48,.06),0 8px 24px rgba(26,33,48,.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#12161c; --surface:#181e27; --surface2:#1f2630; --ink:#e8eae4;
+      --muted:#a7aeb8; --faint:#757e8a; --blue:#86aede; --blue-soft:#223349;
+      --orange:#dc9c5a; --orange-soft:#3a2c1c; --rule:#2a3139;
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35); }
+  }
+  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"IBM Plex Sans",system-ui,sans-serif;line-height:1.6}
+  h1,h2,h3{font-family:Georgia,"Times New Roman",serif;font-weight:600;line-height:1.2}
+  h1{font-size:clamp(2rem,4vw,3.3rem);margin:.2rem 0 1rem}
+  h2{font-size:1.7rem;margin:2.7rem 0 .7rem;border-bottom:1px solid var(--rule);padding-bottom:.45rem}
+  h3{font-size:1.2rem;margin:1.5rem 0 .35rem}
+  p{max-width:80ch} a{color:var(--blue)} code,pre,.mono{font-family:"IBM Plex Mono",monospace}
+  code{font-size:.88em;background:var(--surface2);padding:.12em .3em;border-radius:4px}
+  .shell{max-width:1120px;margin:auto;padding:42px clamp(18px,4vw,52px) 90px}
+  .kicker{color:var(--orange);font:500 .73rem "IBM Plex Mono",monospace;letter-spacing:.13em;text-transform:uppercase}
+  .dek{font-size:1.08rem;color:var(--muted);max-width:75ch}
+  .links{display:flex;flex-wrap:wrap;gap:10px;margin:1.3rem 0}
+  .links a{background:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:8px 13px;text-decoration:none;color:var(--ink);box-shadow:var(--shadow)}
+  .links a.primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+  .callout{border-left:4px solid var(--orange);background:var(--orange-soft);padding:12px 16px;margin:1.4rem 0;border-radius:0 8px 8px 0}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+  .card{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:17px;box-shadow:var(--shadow)}
+  .card h3{margin-top:0}.card p{color:var(--muted);font-size:.94rem}
+  .flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin:1.2rem 0}
+  .step{background:var(--surface);border:1px solid var(--rule);border-top:4px solid var(--blue);border-radius:8px;padding:14px}
+  .step .num{color:var(--orange);font:bold .75rem "IBM Plex Mono",monospace}
+  .step strong{display:block;margin:.25rem 0}.step small{color:var(--muted)}
+  table{border-collapse:collapse;width:100%;margin:1rem 0;background:var(--surface);font-size:.92rem}
+  th,td{text-align:left;border:1px solid var(--rule);padding:9px 11px;vertical-align:top}
+  th{background:var(--surface2);font-weight:600}.formula{background:#182333;color:#e8eef7;border-radius:8px;padding:14px 17px;overflow:auto;margin:1rem 0}
+  .formula code{background:none;padding:0;color:inherit;font-size:.94rem}
+  .warning{color:var(--orange);font-weight:600}.muted{color:var(--muted)}
+  footer{border-top:1px solid var(--rule);margin-top:3rem;padding-top:1rem;color:var(--faint);font-size:.82rem}
+  @media print{body{background:#fff}.card,table{box-shadow:none} .links{display:none}}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+</head>
+<body>
+<main class="shell">
+  <header>
+    <div class="kicker">LATENT_V2 · quant/data walkthrough</div>
+    <h1>How the workflow works</h1>
+    <p class="dek">This guide explains what the repository does from a quantitative and data perspective:
+      what is observed, how it is transformed, which statistical questions are answered, and how factor
+      exposures eventually become benchmark, risk, and trade-proposal inputs.</p>
+    <div class="links">
+      <a class="primary" href="HOW_IT_WORKS.md">Module walkthrough</a>
+      <a href="project-architecture-map.md">Architecture map</a>
+      <a href="factor-pipeline-math.html">Detailed math</a>
+      <a href="index.html">Results page</a>
+    </div>
+  </header>
+
+  <div class="callout"><strong>First distinction:</strong> this is not one single model. It is a chain of
+    research models and portfolio tools. The research track explains returns and tests factor quality.
+    The benchmarking track uses selected outputs to compare a portfolio with a policy benchmark.
+    The real-holdings optimizer then converts that comparison into constrained trade proposals.</div>
+
+  <h2>1. The complete data flow</h2>
+  <div class="flow">
+    <div class="step"><span class="num">01 · RAW DATA</span><strong>Fama–French, FRED, Yahoo Finance</strong><small>Monthly factor returns, macro indicators, and asset/holding prices.</small></div>
+    <div class="step"><span class="num">02 · ALIGN</span><strong>Clean and join by month</strong><small>Dates are normalized, missing observations handled, and returns put on a consistent scale.</small></div>
+    <div class="step"><span class="num">03 · COMPRESS</span><strong>Category PCA</strong><small>About 25 macro series become nine economic-channel factors.</small></div>
+    <div class="step"><span class="num">04 · ESTIMATE</span><strong>VAR and regressions</strong><small>Estimate macro-to-factor relationships and asset-level factor betas.</small></div>
+    <div class="step"><span class="num">05 · DIAGNOSE</span><strong>VIF, HAC, shrinkage</strong><small>Check redundancy, serial correlation, and whether cross-sectional beta differences are signal.</small></div>
+    <div class="step"><span class="num">06 · APPLY</span><strong>Benchmark, TE, optimizer</strong><small>Compare holdings with a policy mix, price active risk, and propose trades subject to constraints.</small></div>
+  </div>
+
+  <h2>2. What enters the system?</h2>
+  <div class="grid">
+    <article class="card"><h3>Fama–French 5 factors</h3>
+      <p><b>Mkt-RF</b>, <b>SMB</b>, <b>HML</b>, <b>RMW</b>, and <b>CMA</b> are investable-style return streams:
+      market excess return, size, value, profitability, and investment. <b>RF</b> is the risk-free rate and is
+      used to convert asset returns into excess returns; it is not treated as a risky factor.</p></article>
+    <article class="card"><h3>Macro indicators from FRED</h3>
+      <p>Growth, inflation, yields, monetary policy, currency, credit/risk appetite, and commodities.
+      Daily/weekly series are reduced to the last available observation in each month. The workable panel begins
+      in January 2006 and forward-fills selected macro columns after that point.</p></article>
+    <article class="card"><h3>Yahoo Finance prices</h3>
+      <p>ETF and holding prices use adjusted monthly closes, so splits and distributions are included.
+      Returns are first stored as percentages (for example, 2.0 means 2%), then converted to decimals
+      (0.02) inside regression and portfolio calculations.</p></article>
+    <article class="card"><h3>Brokerage workbook</h3>
+      <p>The real track reads account, ticker, market value, cost basis, and aggregated short-/long-term gains.
+      Account tax status is inferred from sheet name. This is the only input that contains household-specific
+      holdings and tax data.</p></article>
+  </div>
+
+  <h2>3. Building the macro factors</h2>
+  <h3>3.1 Transforming raw macro series</h3>
+  <p>Index and price-like series are converted to month-over-month percentage changes because PCA on trending
+    levels would mostly discover shared time trends. Yields, spreads, rates, VIX, and already-growth-rate series
+    remain in levels. Each category is then standardized to mean zero and unit variance.</p>
+  <table><tr><th>Category</th><th>Examples</th><th>Interpretation</th></tr>
+    <tr><td>US / Global Growth</td><td>Industrial production, OECD CLI</td><td>Business-cycle conditions by region.</td></tr>
+    <tr><td>Inflation</td><td>CPI, core CPI, HICP</td><td>Price-pressure regime.</td></tr>
+    <tr><td>Rates / Yields</td><td>10Y yields, real yield, breakevens</td><td>Nominal rates and inflation expectations.</td></tr>
+    <tr><td>US / Global Monetary Policy</td><td>Policy rates, central-bank assets, M2</td><td>Policy and liquidity conditions.</td></tr>
+    <tr><td>Currency</td><td>Broad trade-weighted dollar</td><td>Dollar regime.</td></tr>
+    <tr><td>Credit / Risk</td><td>Baa spread, VIX</td><td>Stress and risk appetite.</td></tr>
+    <tr><td>Commodities</td><td>Brent, copper</td><td>Commodity and cyclical pressure.</td></tr>
+  </table>
+  <h3>3.2 Category-level PCA</h3>
+  <p>Rather than run one PCA across all macro columns, the workflow runs one PCA inside each economic category.
+    The first principal component is retained as that category's factor. PCA chooses the linear combination that
+    explains the greatest standardized variance within the group.</p>
+  <div class="formula"><code>MacroFactor_category,t = PC1(standardized transformed series in category)</code></div>
+  <p>The result is nine unitless macro factors. Their sign is mathematical, not intrinsically economic:
+    multiplying a PCA factor and all its loadings by -1 produces the same model fit. Interpret the sign using
+    the loadings printed by <code>quant_model_macro_1.py</code>.</p>
+
+  <h2>4. The statistical models</h2>
+  <div class="grid">
+    <article class="card"><h3>VARX: macro conditions and FF returns</h3>
+      <p><code>quant_model_macro_2.py</code> models each FF factor using lagged values of all five FF factors
+      plus contemporaneous macro PCA factors. The lag order is selected by AIC, with a six-month search cap.
+      Univariate regressions provide a deliberately simple comparison: a relationship that disappears in the
+      VAR may have been correlation with another macro factor.</p></article>
+    <article class="card"><h3>FF5 asset regressions</h3>
+      <p>For each ETF or holding, the dependent variable is excess return. The multivariate regression estimates
+      the asset's conditional exposure to all five FF factors at once. Univariate regressions show how much
+      a factor's apparent relationship changes when the other factors are omitted.</p></article>
+    <article class="card"><h3>Full 14-factor regressions</h3>
+      <p>The five FF factors and nine macro factors are used together. The coefficient is an exposure estimate;
+      the intercept is alpha under the model; R² is in-sample explained-return variance, not a forecast guarantee.
+      Assets with fewer than 40 aligned monthly observations are skipped in this expanded model.</p></article>
+    <article class="card"><h3>HAC / Newey–West inference</h3>
+      <p>Monthly returns can have autocorrelation and changing variance. HAC changes the standard errors and
+      therefore t-statistics, without changing the OLS coefficient itself. The workflow compares plain OLS
+      and HAC t-statistics to see whether inference is sensitive to serial correlation.</p></article>
+  </div>
+  <div class="formula"><code>ExcessReturn_i,t = α_i + β_i' Factor_t + ε_i,t</code><br>
+    <code>t-statistic = estimated coefficient / estimated standard error</code></div>
+
+  <h2>5. Diagnostics: what can and cannot be trusted?</h2>
+  <table><tr><th>Diagnostic</th><th>Question</th><th>Meaning of a good result</th></tr>
+    <tr><td>VIF</td><td>Are the 14 regressors redundant?</td><td>Low VIF means coefficient instability is less likely to be caused by multicollinearity. The committed result's maximum is about 2.17.</td></tr>
+    <tr><td>HAC vs OLS</td><td>Does serial correlation change significance?</td><td>Few significance flips imply autocorrelation is not the main reason a factor looks weak.</td></tr>
+    <tr><td>Empirical-Bayes τ̂</td><td>Is beta dispersion across assets larger than estimation noise?</td><td>τ̂ near zero means observed cross-sectional beta differences are not distinguishable from noise in this sample.</td></tr>
+    <tr><td>R² / residuals</td><td>How much return variation is left unexplained?</td><td>Low residual risk is useful for a factor-only risk model; low R² warns that factor TE may understate actual portfolio risk.</td></tr>
+  </table>
+  <p class="warning">Important: statistical significance is not economic investability.</p>
+  <p>A macro PCA score is an explanatory state variable, not a security that can automatically be bought. This
+    is why the benchmark uses only the five FF return streams even though the 14-factor model is useful for
+    understanding asset returns.</p>
+
+  <h2>6. Constructing the policy benchmark</h2>
+  <p><code>construct_benchmark_mvo.py</code> uses annualized sample means and covariance of the FF5 returns.
+    It maximizes estimated excess Sharpe ratio subject to long-only weights, a 60–70% market-factor band,
+    and a 5% minimum weight for every non-market factor.</p>
+  <div class="formula"><code>maximize (w'μ) / sqrt(w'Σw)</code><br>
+    <code>subject to: Σw = 1; w_i ≥ 0.05 for non-market factors; 0.60 ≤ w_Mkt-RF ≤ 0.70</code></div>
+  <p>Here <code>w</code> is a five-element allocation over <code>[Mkt-RF, SMB, HML, RMW, CMA]</code>,
+    <code>μ = 12 × mean(monthly factor returns)</code>, and <code>Σ = 12 × cov(monthly factor returns)</code>.
+    The factor returns are already excess-of-RF streams, so the objective uses <code>w'μ</code> directly.
+    SLSQP solves the constrained nonlinear max-Sharpe problem. The resulting vector is then treated as
+    buy-and-hold: each sleeve compounds independently and effective weights drift. This is different from
+    rebalancing back to the target every month.</p>
+  <div class="formula"><code>N_i,t = w_i × Π_(s≤t)(1 + F_i,s)</code><br>
+    <code>q_i,t = N_i,t / Σ_j N_j,t</code><br>
+    <code>R_benchmark,t = RF_t + Σ_i q_i,t−1 F_i,t</code></div>
+  <p>The benchmark wealth curve is built from that return equation, with the initial month handled using
+    the target weights. Its monthly return series, rather than a constant-weight rebalanced approximation,
+    is used downstream for realized tracking-error and CVaR scenarios. The saved outputs are
+    <code>benchmark_mvo_weights.csv</code> (the fixed target), <code>benchmark_wealth_curve.csv</code>
+    (wealth and returns), and <code>benchmark_effective_weights.csv</code> (the drifting sleeve mix).</p>
+  <div class="callout"><strong>Modeling judgment:</strong> unconstrained mean-variance optimization is highly
+    sensitive to noisy sample means. The non-market floor is an intentional policy constraint, not a claim that
+    all five factors have statistically positive expected returns.</div>
+  <div class="callout"><strong>Benchmark distinction:</strong> the factor benchmark allocation is itself
+    optimized from historical FF5 returns and covariance. This differs from the SAA benchmark below, whose
+    allocation is imported directly from the Excel policy-target column. In both cases, benchmark construction
+    comes before household trade optimization.</div>
+
+  <h2>7. Constructing the all-equity SAA benchmark</h2>
+  <p><code>optimize_saa_mvo.py</code> is a separate benchmark and optimizer path. It does not estimate
+    Fama–French betas and it does not use the FF5 benchmark's max-Sharpe weights. Instead, it reads
+    <code>all_equity_saa_covariance.xlsx</code> directly:</p>
+  <table><tr><th>Workbook source</th><th>Used as</th><th>Mathematical object</th></tr>
+    <tr><td><code>SAA Targets</code> → <code>Policy Target (no single stock)</code></td><td>Strategic benchmark</td><td>Target vector <code>τ</code></td></tr>
+    <tr><td><code>Covariance</code></td><td>Annualized sleeve risk model</td><td>Positive-semidefinite matrix <code>Ω</code></td></tr>
+    <tr><td><code>Vol &amp; Correlation</code></td><td>Workbook validation/source for the matrix</td><td><code>Ω_ij = ρ_ij σ_i σ_j</code></td></tr>
+  </table>
+  <p>The policy target is the no-single-stock column: <b>Single Stock = 0%</b>, with the remaining
+    all-equity sleeves summing to 100%. The transition-target column, which retains 8% in Single Stock,
+    is documented in the workbook but is not the SAA benchmark used by this workflow.</p>
+  <table><tr><th>Benchmark</th><th>Allocation source</th><th>Optimization when benchmark is created?</th></tr>
+    <tr><td>Factor-based benchmark</td><td>Historical FF5 means and covariance</td><td><b>Yes.</b> Constrained max-Sharpe optimization, then buy-and-hold implementation.</td></tr>
+    <tr><td>SAA benchmark</td><td>Excel <code>Policy Target (no single stock)</code> column</td><td><b>No.</b> The workbook allocation is the fixed policy benchmark; optimization occurs only when generating the household trade proposal.</td></tr>
+  </table>
+  <div class="formula"><code>τ = [0, 0.13, 0.13, 0.07, 0.10, 0.06, 0.05, 0.04, 0.045, 0.03, 0.23, 0.115]</code><br>
+    <code>Ω_ij = annualized covariance of sleeve i and sleeve j</code><br>
+    <code>TE_SAA(x) = sqrt((Mx − τ)' Ω (Mx − τ))</code></div>
+  <p><code>M</code> maps account-level position weights <code>x</code> into sleeve weights. Because the
+    household contains securities rather than one position per workbook sleeve, the implementation uses
+    explicit ticker proxies: MSTR → Single Stock; ITOT/IWF → US Large Growth; IWD/XLB/SCHH/SHV →
+    US Large Value; SCHD → US Dividend; QUAL → US Quality; MTUM → US Momentum; IJJ/IJK/IJS/IJT →
+    their corresponding mid/small sleeves; IEFA → Intl Developed; and IEMG → Emerging Markets.
+    This mapping is deterministic and is recorded in <code>path_metrics.json</code>.</p>
+  <h3>7.1 How the SAA trade proposal is created</h3>
+  <p>The SAA path minimizes squared covariance-based active TE plus the same L1 turnover regularizer
+    used by the factor/CVaR optimizer. It starts from current household weights, keeps Joint and IRA
+    positions as separate decision variables, and does not introduce new tickers.</p>
+  <div class="formula"><code>minimize_x  (Mx − τ)'Ω(Mx − τ) + λ Σ_i |x_i − x0_i|</code><br>
+    <code>subject to: Σ_i x_i = 1; x_i ≥ 0; Σ_(i∈ticker t) x_i ≥ 0.3%</code><br>
+    <code>Σ_(i taxable) max(x0_i − x_i, 0) × tax_rate_i ≤ 2%</code></div>
+  <p>The absolute-value turnover term and taxable sale term are represented with the optimizer's
+    constrained formulation; the resulting account-level weights are converted into
+    <code>trade_proposals_pathSAA.csv</code>. This is a trade proposal that moves toward the SAA policy
+    benchmark, not a claim that the current household already has the benchmark's sleeve exposures.</p>
+  <p>In short: <b>factor benchmark = optimize the benchmark, then optimize household deviations from it</b>;
+    <b>SAA benchmark = read the benchmark from Excel, then optimize household deviations from it</b>.</p>
+
+  <h2>8. From holdings to tracking error</h2>
+  <h3>7.1 Estimate each holding's exposure</h3>
+  <p>Each ticker is regressed separately on FF5. The portfolio beta is the market-value-weighted sum of ticker
+    betas. The benchmark beta is known directly from its target weights, so it does not need to be estimated.</p>
+  <div class="formula"><code>β_portfolio = Σ_t w_t β_t</code><br>
+    <code>Δβ = β_portfolio − β_benchmark</code></div>
+  <h3>7.2 Ex-ante and ex-post TE</h3>
+  <p>Ex-ante TE prices the active factor exposure using the annualized FF5 covariance matrix. Ex-post TE compares
+    realized portfolio and benchmark return histories over their common overlap.</p>
+  <div class="formula"><code>TE_ex-ante = sqrt(Δβ' Σ Δβ)</code><br>
+    <code>TE_ex-post = std(monthly portfolio return − monthly benchmark return) × sqrt(12)</code></div>
+  <p>The first is a systematic-factor forecast; the second includes idiosyncratic shocks, timing, data alignment,
+    and anything else the factor model misses. A large gap is therefore diagnostic, not automatically a bug.</p>
+
+  <h2>9. Real-household optimization</h2>
+  <p>The production track ingests the workbook, downloads monthly prices, estimates ticker betas, and solves for
+    new account-level weights. It does not introduce new tickers: it reweights currently held positions, keeping
+    taxable and IRA rows separate because the same sale has different tax consequences.</p>
+  <div class="grid">
+    <article class="card"><h3>Objective</h3><p>Minimize factor-based active TE squared plus an L1 turnover regularizer. The L1 term discourages cosmetic trades and corner solutions.</p></article>
+    <article class="card"><h3>Active CVaR</h3><p>Build overlapping 12-month scenarios from common ticker history. Computed and reported for every path as context — it is <b>not a constraint</b> on any currently-solved path (Path C, Path D, or the SAA path).</p></article>
+    <article class="card"><h3>Tax budget</h3><p>Only taxable-account sales consume the 2% household tax budget, with MSTR's own realized tax excluded from that budget entirely for all three paths (a separate taxable strategy is assumed to handle it). Aggregated ST/LT gains are prorated by the fraction sold and taxed at configured assumed rates.</p></article>
+    <article class="card"><h3>Allocation floor</h3><p>Every currently held ticker retains at least the configured minimum household allocation, except tickers in <code>NO_ADD_TICKERS</code> (see next card). This is a structural mandate, not a statistical conclusion.</p></article>
+    <article class="card"><h3>No-add tickers</h3><p>SHV may be trimmed or sold but never bought further, in every path in both optimizer scripts. Its current weight (0.295%) sits just under the allocation floor, so it is exempted from that floor rather than made infeasible by it.</p></article>
+  </div>
+  <div class="formula"><code>minimize  Δβ'ΣΔβ + λ Σ_i |x_i − x0_i|</code><br>
+    <code>subject to: sum(x)=1; TaxCost_ex-MSTR ≤ 2%; ticker floors; SHV ≤ current weight</code></div>
+  <p>The absolute values and sale amounts are represented with slack variables, allowing the problem to be handled
+    as a constrained smooth optimization. There is no CVaR constraint in the currently-solved paths, so there is
+    no joint-infeasibility case to relax — each of Path C and Path D is solved directly, differing only in how
+    much of the MSTR position may be sold this year.</p>
+
+  <h2>10. Full mathematical specification of every optimizer</h2>
+  <p>This section gives the exact, solver-level formulation for each of the three optimizations that feed
+    <code>rebalance_dashboard.html</code> — decision variables, objective, every constraint (including the
+    slack-variable linearizations SLSQP actually sees), and the numeric constants used. Sections 6–9 above
+    give the intuition; this is the precise spec.</p>
+
+  <h3>10.1 Benchmark construction — <code>construct_benchmark_mvo.py</code></h3>
+  <p>One-time, non-rebalanced max-Sharpe allocation over the 5 Fama-French factor streams.</p>
+  <div class="formula"><code>variables:  w ∈ R^5   (order: Mkt-RF, SMB, HML, RMW, CMA)</code><br>
+    <code>maximize:   (w'μ) / sqrt(w'Σw)</code><br>
+    <code>subject to: Σ_i w_i = 1</code><br>
+    <code>            0.60 ≤ w_Mkt-RF ≤ 0.70</code><br>
+    <code>            0.05 ≤ w_i ≤ 1   for i ∈ {SMB, HML, RMW, CMA}</code></div>
+  <p><code>μ = 12 × mean(monthly FF5 returns)</code>, <code>Σ = 12 × cov(monthly FF5 returns)</code>, full
+    sample, unshrunk. Solved with SLSQP (<code>maxiter=1000</code>, <code>ftol=1e-12</code>). The resulting
+    <code>w</code> is then compounded buy-and-hold (never rebalanced):</p>
+  <div class="formula"><code>N_i,t = w_i · Π_(s≤t) (1 + F_i,s)          (per-factor notional)</code><br>
+    <code>q_i,t = N_i,t / Σ_j N_j,t                   (drifting effective weight)</code><br>
+    <code>R_benchmark,t = RF_t + Σ_i q_i,t−1 · F_i,t</code></div>
+
+  <h3>10.2 Real-household tax optimizer — <code>optimize_tax_cvar_mvo.py</code></h3>
+  <p>One (ticker, account) row per currently-held position, <code>n</code> rows total. The decision vector is
+    <b>five blocks</b>, always allocated in full regardless of which constraints are switched on for a given
+    solve. Only Path C and Path D are solved from this script now, and both run with the CVaR-floor constraint
+    switched OFF (<code>enforce_cvar=False</code>) — the ζ/u CVaR slack blocks below are still allocated (the
+    decision-vector layout is unconditional, see <code>solve()</code>'s docstring) and CVaR is still computed
+    from them for reporting, it just isn't constrained.</p>
+  <div class="formula"><code>v = [ x (n),  ζ (1),  u (S),  sell (n_Joint),  turn (n) ]</code></div>
+  <table><tr><th>Block</th><th>Meaning</th><th>Bounds</th></tr>
+    <tr><td><code>x_i</code></td><td>weight of row <code>i</code>, fraction of total household value</td><td><code>[0, 1]</code> (or <code>[x0_i(1−cap), 1]</code> under a MSTR sale cap)</td></tr>
+    <tr><td><code>ζ</code></td><td>CVaR auxiliary variable (≈ estimated VaR cutoff)</td><td>unbounded</td></tr>
+    <tr><td><code>u_s</code></td><td>CVaR tail slack, one per scenario <code>s = 1…S</code></td><td><code>[0, ∞)</code></td></tr>
+    <tr><td><code>sell_j</code></td><td>sale-fraction slack, one per taxable (Joint) row</td><td><code>[0, 1]</code></td></tr>
+    <tr><td><code>turn_i</code></td><td>turnover slack, one per row</td><td><code>[0, 1]</code></td></tr>
+  </table>
+  <div class="formula"><code>objective(v) =  Δβ(x)'Σ Δβ(x)  +  λ · Σ_i turn_i                (both Path C and Path D)</code><br>
+    <code>Δβ(x) = Σ_i x_i β_ticker(i)  −  β_benchmark        (n×5 beta matrix, aggregated across both accounts)</code></div>
+  <p>Constraints, in the exact linear/quadratic form the solver sees:</p>
+  <div class="formula"><code>(1) budget:        Σ_i x_i = 1</code><br>
+    <code>(2) CVaR slack:     u_s ≥ Loss_s(x) − ζ,   u_s ≥ 0,   for every scenario s   [computed always, informational]</code><br>
+    <code>                    Loss_s(x) = BenchAnnual_s − Σ_i x_i · A_i,s</code><br>
+    <code>(3) CVaR floor:     ζ + [1 / (α·S)] · Σ_s u_s  ≤  −CVAR_FLOOR   [OFF for Path C/D — enforce_cvar=False]</code><br>
+    <code>(4) tax slack:      sell_j ≥ x0_j − x_j,   sell_j ≥ 0,   for j ∈ Joint rows</code><br>
+    <code>(5) tax budget:     Σ_j sell_j · taxRate_j,budget  ≤  TAX_BUDGET   (0.02, MSTR's rate zeroed in taxRate_j,budget)</code><br>
+    <code>(6) turnover:       turn_i ≥ x_i − x0_i   and   turn_i ≥ x0_i − x_i   (⇒ turn_i = |x_i − x0_i| at the optimum)</code><br>
+    <code>(7) ticker floor:   Σ_(i: ticker(i)=t) x_i  ≥  MIN_TICKER_WEIGHT,   for t ∉ NO_ADD_TICKERS   (always on)</code><br>
+    <code>(8) no-add bound:   x_i ≤ x0_i,   for every row where ticker(i) ∈ NO_ADD_TICKERS   (bound, not a constraint fn)</code></div>
+  <p>Constraint (2) still builds the CVaR slack every solve — the decision-vector layout is unconditional — and
+    the resulting CVaR value is reported in <code>path_metrics.json</code> for every path, but constraint (3),
+    the actual floor, is switched off for both Path C and Path D (<code>enforce_cvar=False</code>). It uses
+    <code>S</code> overlapping 12-month scenarios built from common ticker history: <code>A_i,s</code> = ticker
+    <code>i</code>'s summed monthly return over scenario window <code>s</code>, <code>BenchAnnual_s</code> = the
+    benchmark's summed monthly return over the same window. <code>taxRate_j = (LT_Gain_j·TAX_LT +
+    ST_Gain_j·TAX_ST) / MarketValue_j</code>, computed once per Joint-account ticker from the workbook's
+    aggregated (not per-lot) gain figures; <code>taxRate_j,budget</code> is that same vector with MSTR's entry
+    zeroed out (<code>exclude_from_tax_budget={"MSTR"}</code>), so MSTR's sale is free from constraint (5)'s
+    point of view while its true tax cost is still reported in the trade table via the unmodified
+    <code>taxRate_j</code>.</p>
+  <p>MSTR's row is also bound-restricted: <code>x_MSTR ≥ x0_MSTR · (1 − sell_cap)</code>, with
+    <code>sell_cap = 70%</code> for Path C and <code>30%</code> for Path D — both raised from this
+    optimization's earlier 30%/10% caps, so both paths now permit selling a much larger share of the current
+    MSTR position in a single year.</p>
+  <p><b>SHV may be trimmed or sold, but never bought further, in any path.</b> <code>NO_ADD_TICKERS =
+    {"SHV"}</code> caps that row's upper bound at its current weight (constraint (8) above) instead of the
+    usual <code>[0, 1]</code>. SHV's current combined weight is 0.295% — just under
+    <code>MIN_TICKER_WEIGHT</code> (0.3%) — so it is also excluded from constraint (7)'s floor entirely: requiring
+    both "no more than its current weight" and "at least 0.3%" on the same ticker would make the problem
+    infeasible, and the no-add mandate is the deliberate one here. In practice SHV simply holds at its current
+    weight (0.295%) in every path this run — there is no tax or CVaR reason to sell it, only a bound against
+    adding to it.</p>
+  <table><tr><th>Constant</th><th>Value</th><th>Role</th></tr>
+    <tr><td><code>MIN_OBS</code></td><td>24 months</td><td>minimum aligned history to fit a ticker's FF5 betas</td></tr>
+    <tr><td><code>WINDOW</code></td><td>12 months</td><td>length of each overlapping CVaR scenario</td></tr>
+    <tr><td><code>CVAR_ALPHA_TAIL (α)</code></td><td>0.05</td><td>tail fraction (worst 5% of scenarios), used for the informational CVaR figure only</td></tr>
+    <tr><td><code>CVAR_FLOOR</code></td><td>−0.15</td><td>kept as a reference level shown in the dashboard; not enforced by any currently-solved path</td></tr>
+    <tr><td><code>TAX_BUDGET</code></td><td>0.02</td><td>max annual realized-gain tax, ex-MSTR, as a fraction of household value — same for Path C and Path D</td></tr>
+    <tr><td><code>TAX_LT</code></td><td>0.295</td><td>blended LT cap-gains rate (midpoint of client's 25–33% range)</td></tr>
+    <tr><td><code>TAX_ST</code></td><td>0.408</td><td>assumed top ordinary + 3.8% NIIT, applied to the (near-zero) ST portion</td></tr>
+    <tr><td><code>MIN_TICKER_WEIGHT</code></td><td>0.003</td><td>every held ticker (except <code>NO_ADD_TICKERS</code>) keeps ≥ 0.3% of household value</td></tr>
+    <tr><td><code>NO_ADD_TICKERS</code></td><td>{"SHV"}</td><td>these tickers may be trimmed or sold, never bought further — applies to every path in every script</td></tr>
+    <tr><td><code>TURNOVER_LAMBDA (λ)</code></td><td>0.01</td><td>L1 turnover penalty vs. the TE² objective (unitless regularizer)</td></tr>
+    <tr><td>Path C MSTR sale cap</td><td>0.70</td><td>up to 70% of the current MSTR position may be sold this run</td></tr>
+    <tr><td>Path D MSTR sale cap</td><td>0.30</td><td>up to 30% of the current MSTR position may be sold this run</td></tr>
+  </table>
+  <p>Solved with SLSQP (analytic Jacobians for every constraint, <code>maxiter=2000</code>,
+    <code>ftol=1e-12</code>). Both Path C and Path D are solved directly through the same <code>solve()</code>
+    function with <code>enforce_cvar=False</code>, <code>enforce_tax_budget=True</code>,
+    <code>exclude_from_tax_budget={"MSTR"}</code>, and a <code>max_sell_frac</code> entry for MSTR — there is no
+    joint-CVaR-and-tax problem attempted first and no relaxation fallback (the earlier "Joint / Path A / Path B"
+    design has been retired from this script entirely; <code>solve()</code> still supports a CVaR-floor
+    constraint and a tax-cost-minimizing objective as general machinery, simply unused by anything currently
+    invoked).</p>
+
+  <h3>10.3 SAA optimizer — <code>optimize_saa_mvo.py</code></h3>
+  <p>Reweights the same (ticker, account) rows to track the workbook's sleeve-level policy target instead of the
+    FF5 benchmark. No CVaR constraint — this path only minimizes sleeve-covariance active TE subject to its own
+    tax budget, its own MSTR carve-out/sale-cap, and the ticker floor. This path runs its <b>own, independently
+    tracked 2% tax budget</b> (numerically the same as Path C/D's 2%, but a separate constant,
+    <code>SAA_TAX_BUDGET</code>, not a shared one) and its own MSTR-specific treatment.</p>
+  <div class="formula"><code>variables:  x ∈ R^n           (row weights, reused from the same holdings table)</code><br>
+    <code>minimize:   (Mx − τ)'Ω(Mx − τ)  +  λ · Σ_i |x_i − x0_i|</code><br>
+    <code>subject to: Σ_i x_i = 1</code><br>
+    <code>            x_i ∈ [0, 1]                              for i not MSTR and not in NO_ADD_TICKERS</code><br>
+    <code>            x_MSTR ∈ [x0_MSTR · (1 − 0.50), 1]         MSTR sale capped at 50% of its current position</code><br>
+    <code>            x_i ∈ [0, x0_i]                           for ticker(i) ∈ NO_ADD_TICKERS (SHV): no buys</code><br>
+    <code>            Σ_j max(x0_j − x_j, 0) · taxable_j · taxRate_j,budget  ≤  SAA_TAX_BUDGET   (0.02)</code><br>
+    <code>            Σ_(i: ticker(i)=t) x_i  ≥  MIN_TICKER_WEIGHT   (0.003),   for t ∉ NO_ADD_TICKERS</code></div>
+  <p><code>M</code> is the fixed <code>n_sleeves × n</code> ticker→sleeve mapping matrix (one 1 per row, the rest
+    0 — see the ticker proxy table in section 7); <code>τ</code> is the workbook's
+    <code>Policy Target (no single stock)</code> column; <code>Ω</code> is the workbook's sleeve covariance
+    matrix. <code>λ = TURNOVER_LAMBDA = 0.01</code>, the same constant as the FF5/CVaR optimizer's TE-objective
+    turnover penalty. The <code>|x_i − x0_i|</code> and <code>max(x0_j − x_j, 0)</code> terms are passed to
+    SLSQP directly (this path does not introduce explicit slack variables the way 10.2 does — they're evaluated
+    inside the objective/constraint functions each iteration) and solved with the same
+    <code>method="SLSQP", ftol=1e-12, maxiter=2000</code> settings.</p>
+  <p><code>taxRate_j,budget</code> is <code>taxRate_j</code> with MSTR's rate zeroed out — the same
+    <code>exclude_from_tax_budget</code> device Path C/D use in 10.2: MSTR's sale is free from the 2% budget
+    constraint's point of view (a separate taxable strategy is assumed to absorb MSTR's own tax), while the
+    trade table it feeds still reports MSTR's <i>true</i> tax cost, computed from the unmodified
+    <code>taxRate_j</code>, for full transparency. <code>SAA_TAX_BUDGET</code> and the 50% MSTR sale cap are
+    both defined locally in <code>optimize_saa_mvo.py</code>, independent of Path C/D's <code>TAX_BUDGET</code>
+    (2%, defined in <code>optimize_tax_cvar_mvo.py</code>) and their sale caps (70%/30%) — the tax-budget
+    percentage happens to match Path C/D's, but it is tracked as a separate constant, not a shared one, and the
+    50% MSTR cap is unique to this path. <code>NO_ADD_TICKERS</code>, by contrast, <i>is</i> shared —
+    <code>optimize_saa_mvo.py</code> imports it directly from <code>optimize_tax_cvar_mvo.py</code> rather than
+    redefining it, so SHV's no-buy rule is a single setting that applies identically to Path C, Path D, and
+    Path SAA, not three separately-maintained copies.</p>
+
+  <h2>11. Optimization configurations</h2>
+  <p>Section 10 gave the general QP form each script solves. Exactly <b>three</b> trade-proposal paths are
+    computed now — no "Joint" solve, no Path A, no Path B — each rendered as its own card/tab in
+    <code>rebalance_dashboard.html</code>: Path C and Path D (<code>optimize_tax_cvar_mvo.py</code>, same
+    problem, different MSTR sale cap) and Path SAA (<code>optimize_saa_mvo.py</code>, a fully independent
+    solve). None of the three is CVaR-constrained.</p>
+
+  <h3>11.1 Benchmark constructions (set the optimization target)</h3>
+  <div class="grid">
+    <article class="card"><h3>FF5 policy benchmark</h3><p><code>construct_benchmark_mvo.py</code> &middot; max-Sharpe
+      over the 5 Fama-French factors, 60–70% market band, 5% non-market floor. One-time, buy-and-hold, never
+      rebalanced. Feeds <code>β_benchmark</code> used by Path C and Path D.</p></article>
+    <article class="card"><h3>All-equity SAA target</h3><p><code>all_equity_saa_covariance.xlsx</code> &middot;
+      no optimization — the <code>Policy Target (no single stock)</code> column is read directly as
+      <code>τ</code>. Single Stock fixed at 0%. Feeds the SAA path's own objective (its weights are still
+      evaluated against the FF5 benchmark afterward, purely for risk-attribution reporting — see 11.3).</p></article>
+  </div>
+
+  <h3>11.2 Household trade-proposal paths (reweight the actual holdings)</h3>
+  <p>All three configurations below start from the same current holdings <code>x0</code>, reweight the same
+    21-position book, and never introduce a new ticker. All three drop the CVaR-floor constraint entirely —
+    CVaR is still computed and reported, just not enforced. All three also share one more restriction not shown
+    in the table below: <b>SHV may be trimmed or sold, but never bought, in any of the three</b>
+    (<code>NO_ADD_TICKERS</code>, defined once in <code>optimize_tax_cvar_mvo.py</code> and imported by
+    <code>optimize_saa_mvo.py</code>).</p>
+  <table>
+    <tr><th>Config</th><th>Objective</th><th>CVaR floor</th><th>Tax budget (ex-MSTR)</th><th>MSTR carve-out</th><th>MSTR sale cap</th><th>SHV</th><th>Output file</th></tr>
+    <tr><td><b>Path C</b></td><td>min TE²</td><td>off</td><td>2%</td><td>MSTR tax free of budget</td><td><b>70%</b></td><td>no-add</td><td><code>trade_proposals_pathC.csv</code></td></tr>
+    <tr><td><b>Path D</b></td><td>min TE²</td><td>off</td><td>2%</td><td>MSTR tax free of budget</td><td><b>30%</b></td><td>no-add</td><td><code>trade_proposals_pathD.csv</code></td></tr>
+    <tr><td><b>Path SAA</b></td><td>min sleeve TE²</td><td>n/a (different risk model)</td><td><b>own 2%</b></td><td>MSTR tax free of budget</td><td><b>50%</b></td><td>no-add</td><td><code>trade_proposals_pathSAA.csv</code></td></tr>
+  </table>
+  <div class="callout"><strong>What changed:</strong> the CVaR-floor constraint was removed entirely from
+    Path C and Path D (<code>enforce_cvar=False</code>) — they now solve a plain tax-budget-constrained
+    min-TE problem. Path C's MSTR sale cap was raised to <b>70%</b> and Path D's to <b>30%</b>. The "Joint"
+    solve and Paths A/B have been retired from the script; only C and D remain. The SAA path's tax budget was
+    changed to <b>2%</b> (from a previous 5%) and its MSTR sale cap raised to <b>50%</b>; MSTR remains
+    excluded from that budget, same device as Path C/D. These caps/budgets
+    (<code>SAA_TAX_BUDGET</code>/<code>SAA_MSTR_SELL_CAP</code> in <code>optimize_saa_mvo.py</code>, and
+    <code>MSTR_CAPPED_PATHS</code> in <code>optimize_tax_cvar_mvo.py</code>) are tracked as independent
+    constants per script, even where values now coincide (all three run a 2% ex-MSTR tax budget). Separately,
+    <b>SHV was added to <code>NO_ADD_TICKERS</code></b>, a per-row upper bound (not a tax/CVaR constraint)
+    applied identically in all three paths: SHV may be trimmed or sold, never bought. Its current combined
+    weight (0.295%) is just under the 0.3% allocation floor, so it is also exempted from that floor — enforcing
+    both on the same ticker would be infeasible by construction.</div>
+
+  <h3>11.3 Live results, this run</h3>
+  <p>Actual output of <code>run_rebalance_pipeline.py --from optimize</code> against the current household
+    holdings, after the config change above — household value <b>$3,709,082.54</b>, pulled from
+    <code>path_metrics.json</code> and <code>risk_attribution.json</code>. All three paths solved feasibly;
+    there is no infeasible-relaxation case anymore since none of them is CVaR-constrained. SHV holds flat
+    (0.295% → 0.295%, Direction = HOLD) in all three trade tables, as expected from the no-add bound.</p>
+  <table>
+    <tr><th>Config</th><th>Own-objective TE</th><th>Tax cost</th><th>Turnover</th></tr>
+    <tr><td>Before any trade</td><td>11.57% (FF5)</td><td>$0</td><td>0.00%</td></tr>
+    <tr><td><b>Path C</b> (70% cap)</td><td>7.73% (FF5)</td><td>~$0 ex-MSTR (0.00%) + $248,850 MSTR = $248,850 total</td><td>23.28%</td></tr>
+    <tr><td><b>Path D</b> (30% cap)</td><td>9.67% (FF5)</td><td>~$0 ex-MSTR (0.00%) + $112,954 MSTR = $112,954 total</td><td>10.57%</td></tr>
+    <tr><td><b>Path SAA</b> (2% budget, 50% cap)</td><td>4.34% (sleeve; was 8.06%)</td><td>$6 ex-MSTR (0.00%) + $170,686 MSTR = $170,693 total</td><td>15.97%</td></tr>
+  </table>
+  <p class="muted">"Own-objective TE" is what each path's own objective function actually minimizes — FF5
+    factor-only tracking error for Path C/D, sleeve-covariance tracking error for Path SAA — so the three
+    numbers are not directly comparable to each other; see the FF5-consistent comparison in 11.4 below for
+    that. Tax cost splits into the ex-MSTR amount (what counts against that path's own 2% budget) and MSTR's
+    own tax (carved out, reported separately). Turnover is one-way (buys and sells net to zero since the book
+    stays fully invested). Re-run <code>python run_rebalance_pipeline.py --from optimize</code> whenever
+    holdings, prices, the benchmark, or these constants change — these numbers are a snapshot, not a
+    constant.</p>
+
+  <h3>11.4 SAA's risk metrics on the FF5 benchmark</h3>
+  <p><code>portfolio_risk_attribution.py</code> now attributes <b>Path SAA</b>'s proposed weights on the same
+    FF5 factor model as Path C and Path D, even though SAA's own objective never targets FF5 tracking error —
+    this is attribution of what SAA's sleeve-covariance-optimized weights happen to expose the household to
+    on the FF5 benchmark, so it can be compared apples-to-apples with Path C/D on the Risk Attribution and
+    Asset Classes tabs (both now support a path filter — see the "Deep Dive" control on each tab).</p>
+  <table>
+    <tr><th>Config</th><th>FF5 TE, factor-only</th><th>FF5 TE, total (+idiosyncratic)</th><th>FF5 Active CVaR(5%)</th></tr>
+    <tr><td>Before any trade</td><td>11.57%</td><td>20.54%</td><td>−22.05%</td></tr>
+    <tr><td><b>Path C</b></td><td>7.73%</td><td>9.74%</td><td>−7.87%</td></tr>
+    <tr><td><b>Path D</b></td><td>9.67%</td><td>15.35%</td><td>−14.64%</td></tr>
+    <tr><td><b>Path SAA</b></td><td>9.01%</td><td>13.06%</td><td>−14.17%</td></tr>
+  </table>
+  <p class="muted">On this shared FF5 yardstick, Path SAA's FF5 factor-only TE (9.01%) now sits almost exactly
+    between Path C (7.73%) and Path D (9.67%) — a coincidence of this run, not a designed relationship: SAA
+    never optimizes for FF5 tracking error at all, it optimizes sleeve-covariance tracking error against a
+    different policy target (0% single stock, across 12 all-equity sleeves). Path C's larger MSTR sale (70%
+    cap) gives it the best FF5 CVaR of the three (−7.87%, well inside the old −15% reference level) purely as
+    a side effect of shrinking the single-stock position furthest — none of the three paths targets CVaR
+    directly anymore.</p>
+
+  <div class="grid">
+    <article class="card"><h3>Path C &middot; MSTR excluded, 70% cap</h3>
+      <p>Minimize tracking error subject only to the 2% tax budget (no CVaR constraint). MSTR's realized tax is
+        zeroed out of the budget-facing tax vector (a separate taxable strategy — exchange fund, 10b5-1, etc. —
+        is assumed to absorb it) and this year's MSTR sale is capped at 70% of its current position: close to
+        a one-shot exit, and the fastest glide path of the three household paths.</p></article>
+    <article class="card"><h3>Path D &middot; MSTR excluded, 30% cap</h3>
+      <p>Identical problem to Path C, with the MSTR sale cap set to 30% of its current position — a
+        meaningfully slower glide path than Path C's 70%, trading a smaller immediate tax bill for a smaller
+        immediate tracking-error reduction.</p></article>
+    <article class="card"><h3>Path SAA &middot; all-equity strategic allocation</h3>
+      <p>Independent optimizer (separate script, separate risk model) minimizing covariance-based tracking error
+        to the all-equity workbook's policy target with 0% single stock, subject to its own <b>2% annual tax
+        budget</b>, the minimum ticker floors, and a MSTR-specific carve-out matching Path C/D's device: MSTR's
+        realized tax is excluded from that 2% budget entirely, and this year's MSTR sale is capped at
+        <b>50%</b> of its current position. Still does not use the FF5 benchmark or a CVaR constraint in its
+        own objective — it is a parallel "what would a pure de-risked, no-single-stock allocation look like"
+        view, evaluated against the FF5 benchmark only afterward, for the Risk Attribution tab (11.4).</p></article>
+  </div>
+  <div class="callout"><strong>Reading the dashboard:</strong> all three paths (C, D, SAA) always appear now —
+    there is no feasibility branching left to reason about, since none of the three is CVaR-constrained and
+    the 2% ex-MSTR tax budget is easy to satisfy once MSTR itself is excluded from it. The Risk Attribution
+    and Asset Classes tabs each carry a "Deep Dive" filter to isolate one path's panels at a time (including
+    Path SAA, now that it has FF5 risk numbers too) instead of only comparing all of them side by side.</div>
+
+  <h2>12. Risk attribution and interpretation</h2>
+  <p><code>portfolio_risk_attribution.py</code> separates two kinds of risk:</p>
+  <table><tr><th>Component</th><th>How it is calculated</th><th>What it tells you</th></tr>
+    <tr><td>Factor TE contribution</td><td>Euler allocation of <code>sqrt(Δβ'ΣΔβ)</code> by factor.</td><td>Which active style bets create systematic tracking risk.</td></tr>
+    <tr><td>Idiosyncratic TE contribution</td><td>Weighted residual variances from each ticker regression, assuming cross-ticker residual covariance is zero.</td><td>How much risk is not represented by FF5 factors, often concentrated single-stock risk.</td></tr>
+    <tr><td>Tail CVaR contribution</td><td>Average factor returns only over the portfolio's worst 5% annual scenarios.</td><td>Which factors mattered specifically in bad active-return windows.</td></tr>
+    <tr><td>Exposure z-score</td><td>Standardize each ticker's beta relative to the household's own ticker universe.</td><td>Relative tilt within this book, not a market-wide Barra score.</td></tr>
+  </table>
+
+  <h2>13. What is real, synthetic, and unfinished?</h2>
+  <div class="grid">
+    <article class="card"><h3>Research outputs</h3><p>FRED, Ken French, and Yahoo Finance inputs are external data. The committed factor-research CSVs are historical research outputs, not automatically refreshed live estimates.</p></article>
+    <article class="card"><h3>Sample portfolio</h3><p>The sample holdings and its reported portfolio results are fabricated demonstration data. They validate the mechanics, not a real person's performance.</p></article>
+    <article class="card"><h3>Real-household track</h3><p>The workbook-driven optimizer is designed for actual account data, but its results remain model-based proposals and depend on price history, gain aggregation, tax assumptions, and constraints.</p></article>
+    <article class="card"><h3>Prototype track</h3><p><code>benchmark_tracking_error_model.py</code> deliberately generates a synthetic portfolio with style drift. Its rolling-beta and Ledoit–Wolf outputs are machinery demonstrations, not household results.</p></article>
+  </div>
+
+  <h2>14. Main limitations to keep in mind</h2>
+  <ul>
+    <li>Macro factors are PCA scores of indicators, not directly tradable factor returns.</li>
+    <li>Forward-filling can preserve stale observations and may understate the timing uncertainty of slow data.</li>
+    <li>Most estimates are in-sample; there is no complete walk-forward validation or out-of-sample forecast test.</li>
+    <li>OLS betas are static in the primary pipeline. The time-varying-beta sampler is standalone and not wired into the production flow.</li>
+    <li>Factor-only TE can materially understate risk for concentrated positions with large regression residuals.</li>
+    <li>The optimizer uses aggregated ST/LT gains rather than tax-lot dates, so actual realized tax outcomes can differ.</li>
+    <li>Overlapping annual CVaR windows are dependent observations, and the arithmetic 12-month return approximation is chosen to preserve linearity.</li>
+    <li>Some factor-research scripts contain hardcoded Windows paths; rebuilds on another machine require path edits.</li>
+  </ul>
+
+  <h2>15. Practical run order</h2>
+  <ol>
+    <li>Build the factor panel with <code>fetch_macro_fred.py</code>, <code>pull_yfinance_data.py</code>, and <code>transform_data_ff.py</code>.</li>
+    <li>Run <code>quant_model_macro_1.py</code> for macro PCA, then <code>quant_model_macro_2.py</code> for VARX.</li>
+    <li>Run <code>quant_model_macro_3.py</code> and <code>quant_model_macro_4.py</code> for asset betas and inference.</li>
+    <li>Run <code>vif_check.py</code> and regenerate charts when diagnostics or upstream data change.</li>
+    <li>For the sample track, generate holdings, fetch prices, construct the benchmark, and calculate exposures.</li>
+    <li>For the real track, ingest the workbook, fetch real holding prices, construct the FF5 benchmark, run the tax-constrained optimizer (Paths C/D), run the SAA optimizer from <code>all_equity_saa_covariance.xlsx</code>, attribute FF5 risk (including Path SAA), and generate the dashboard.</li>
+  </ol>
+  <footer>Generated as a repository guide. Source modules and committed outputs remain the authoritative implementation.</footer>
+</main>
+</body>
+</html>

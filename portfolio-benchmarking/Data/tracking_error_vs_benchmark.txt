@@ -1,0 +1,26 @@
+Tracking Error vs. Constructed Benchmark (SAMPLE DATA)
+========================================================
+
+Benchmark: 60% Mkt-RF / 40% RMW, fixed weights, no rebalancing (construct_benchmark_mvo.py)
+Covariance: full-sample (unshrunk) annualized FF5 covariance matrix
+
+Factor exposures (beta):
+        Portfolio (Full, w/ PLTR)  Portfolio (Ex-Concentrated)  Benchmark  Delta_Full  Delta_ExConcentrated
+Mkt-RF                     1.1874                       0.7945        0.6      0.5874                0.1945
+SMB                        0.5310                      -0.1517        0.0      0.5310               -0.1517
+HML                       -0.7307                       0.0196        0.0     -0.7307                0.0196
+RMW                       -0.5419                       0.1631        0.4     -0.9419               -0.2369
+CMA                        0.0299                       0.0454        0.0      0.0299                0.0454
+
+Ex-ante TE (sqrt(db' Sigma db)):
+  Full portfolio (w/ PLTR):  15.8468%
+  Ex-concentrated portfolio:         3.3659%
+
+Ex-post (realized) TE, common overlap 2020-10-01 -> 2026-06-01 (69 months, capped by the concentrated position's shorter history):
+  Full portfolio (w/ PLTR):  36.2419%
+  Ex-concentrated portfolio:         3.7731%
+
+CAGR over the same overlap window:
+  Full portfolio (w/ PLTR):  36.8005%
+  Ex-concentrated portfolio:         14.0620%
+  Benchmark:                 13.5530%

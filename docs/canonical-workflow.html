@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>Canonical portfolio workflow</title>
+<style>body{font:16px system-ui;max-width:1100px;margin:2rem auto;color:#17202a}
+pre{background:#f5f7f9;padding:1.2rem;white-space:pre-wrap;border:1px solid #ccd}
+.note{padding:.7rem;background:#d9f2e6}.demo{padding:.7rem;background:#fff1cc}</style>
+<h1>Canonical portfolio workflow</h1>
+<p class="note"><b>Real track:</b> ingestion → normalization → prices → explicit policy
+benchmark → optimization → TE/CVaR attribution → report.</p>
+<p class="demo"><b>Demo boundary:</b> the synthetic TE prototype and collar what-if
+analysis are reference analyses; they never feed real holdings or optimization.</p>
+<pre>Factor / macro ingestion ──> Normalized factor panel ─────┐
+                                                          v
+Brokerage workbook ─> Ingest holdings ─> Prices ─> Policy benchmark
+                                                       │
+                                                       v
+                                             Tax-aware optimization
+                                                │             │
+                                                v             v
+                                      Tracking error       CVaR scenarios
+                                                └──────┬──────┘
+                                                       v
+                                                Risk attribution
+                                                       v
+                                                Rebalance report
+
+                         [synthetic demo TE]  - - - - -┘
+                         [collar what-if]     - - - - -┘</pre>
+<p>Source: <a href="canonical-workflow.mmd">canonical-workflow.mmd</a>.
+Dashed paths are intentionally isolated demos.</p>
+</html>

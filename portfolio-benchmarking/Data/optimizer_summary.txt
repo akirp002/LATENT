@@ -1,0 +1,75 @@
+Tax-Aware Minimum-Tracking-Error Optimization (Paths C / D)
+=================================================================
+
+Household market value: $2,235,600.00
+Tickers used: ['IEFA', 'IEMG', 'IJJ', 'IJK', 'IJS', 'IJT', 'ITOT', 'IWD', 'IWF', 'MSTR', 'MTUM', 'QUAL', 'SCHD', 'SCHH', 'SHV', 'XLB']
+Tickers dropped (insufficient history): none
+
+Objective: minimize ex-ante tracking error vs. the policy benchmark (construct_benchmark_mvo.py) -- factor term uses the annualized 50/50 blended FF5 covariance (raw full-sample covariance + 12-month-half-life EWMA) implemented by blended_factor_covariance(), PLUS an idio term (FF5-residual covariance across the FULL ticker weight, shrunk 40% toward its diagonal -- see residual_covariance()), plus a per-position L1 turnover penalty lambda * sum_i |x_i - x0_i| (lambda = 0.02). No CVaR constraint -- Active CVaR is still computed and reported below for context, but it does not gate either path's solution.
+Every held ticker floored at 0.30% of household value (Constraint 3).
+Before any trades: TE = 23.0527% (factor-only: 12.3617%), Active CVaR(5%) = -22.9631% (informational only).
+
+
+Path C -- min TE s.t. tax budget only (no CVaR constraint), MSTR's tax excluded from the 2% budget (separate taxable strategy assumed), MSTR sale capped at 70% of its current position:
+  TE: 23.0527% -> 8.8044% (factor-only: 12.3617% -> 6.3814%)   CVaR (informational): -22.9631% -> -7.7065%
+  Tax cost ex-MSTR (counts against budget): $0 (0.0000%)
+  MSTR's own tax cost (excluded, separate strategy): $129,063
+  Total realized tax cost (both): $129,063 (5.7731%)
+                              Account       Ticker Direction  Current_Weight  Proposed_Weight  Trade_Dollars  Realized_Gain_Dollars  Tax_Cost_Dollars
+            Household Joint (Taxable)         MSTR      SELL          0.2907           0.0872    -455000.000               437501.4        129062.913
+            Household Joint (Taxable)          IJS      HOLD          0.0555           0.0555         -0.000                    0.0             0.000
+            Household Joint (Taxable)         IEFA      HOLD          0.0505           0.0505         -0.000                    0.0             0.000
+            Household Joint (Taxable)         IEMG      HOLD          0.0604           0.0604         -0.000                    0.0             0.000
+            Household Joint (Taxable)          IJK      HOLD          0.0367           0.0367         -0.000                    0.0             0.000
+            Household Joint (Taxable)          IJT      HOLD          0.0573           0.0573         -0.000                    0.0             0.000
+Account Holder A IRA (Tax-Advantaged)         SCHD      HOLD          0.0028           0.0028         -0.000                    0.0             0.000
+Account Holder A IRA (Tax-Advantaged)         MTUM      HOLD          0.0041           0.0041         -0.000                    0.0             0.000
+Account Holder A IRA (Tax-Advantaged)         SCHH      HOLD          0.0020           0.0020         -0.000                    0.0             0.000
+            Household Joint (Taxable)          SHV      HOLD          0.0030           0.0030          0.000                    0.0             0.000
+Account Holder A IRA (Tax-Advantaged)          IWD      HOLD          0.0057           0.0057          0.000                    0.0             0.000
+Account Holder A IRA (Tax-Advantaged)         QUAL      HOLD          0.0051           0.0051          0.000                    0.0             0.000
+Account Holder A IRA (Tax-Advantaged)         ITOT      HOLD          0.0064           0.0064          0.000                    0.0             0.000
+            Household Joint (Taxable)         QUAL      HOLD          0.0528           0.0528          0.000                    0.0             0.000
+            Household Joint (Taxable)         ITOT      HOLD          0.0680           0.0680          0.000                    0.0             0.000
+            Household Joint (Taxable)         MTUM      HOLD          0.0429           0.0429          0.000                    0.0             0.000
+Account Holder A IRA (Tax-Advantaged)         IEMG      HOLD          0.0031           0.0031          0.000                    0.0             0.000
+Account Holder A IRA (Tax-Advantaged)          IJJ      HOLD          0.0039           0.0039          0.000                    0.0             0.000
+            Household Joint (Taxable)          IWF      HOLD          0.0403           0.0403          0.000                    0.0             0.000
+            Household Joint (Taxable)          IWD      HOLD          0.0631           0.0631          0.000                    0.0             0.000
+            Household Joint (Taxable)         SCHH      HOLD          0.0036           0.0036          0.000                    0.0             0.000
+            Household Joint (Taxable)          IJJ      HOLD          0.0617           0.0617          0.000                    0.0             0.000
+            Household Joint (Taxable)          XLB      HOLD          0.0054           0.0054          0.000                    0.0             0.000
+                                 Cash CASH_RESERVE   RESERVE          0.0000           0.0577     129062.913                    0.0             0.000
+            Household Joint (Taxable)         SCHD       BUY          0.0751           0.2209     325937.087                    0.0             0.000
+
+Path D -- min TE s.t. tax budget only (no CVaR constraint), MSTR's tax excluded from the 2% budget (separate taxable strategy assumed), MSTR sale capped at 30% of its current position:
+  TE: 23.0527% -> 16.7631% (factor-only: 12.3617% -> 9.7334%)   CVaR (informational): -22.9631% -> -15.5128%
+  Tax cost ex-MSTR (counts against budget): $0 (0.0000%)
+  MSTR's own tax cost (excluded, separate strategy): $55,313
+  Total realized tax cost (both): $55,313 (2.4742%)
+                              Account       Ticker Direction  Current_Weight  Proposed_Weight  Trade_Dollars  Realized_Gain_Dollars  Tax_Cost_Dollars
+            Household Joint (Taxable)         MSTR      SELL          0.2907           0.2035    -195000.000               187500.6         55312.677
+            Household Joint (Taxable)         IEMG      HOLD          0.0604           0.0604         -0.000                    0.0             0.000
+            Household Joint (Taxable)          IWF      HOLD          0.0403           0.0403         -0.000                    0.0             0.000
+            Household Joint (Taxable)          IJK      HOLD          0.0367           0.0367         -0.000                    0.0             0.000
+            Household Joint (Taxable)         QUAL      HOLD          0.0528           0.0528         -0.000                    0.0             0.000
+            Household Joint (Taxable)         SCHH      HOLD          0.0036           0.0036         -0.000                    0.0             0.000
+            Household Joint (Taxable)          XLB      HOLD          0.0054           0.0054         -0.000                    0.0             0.000
+            Household Joint (Taxable)          IJS      HOLD          0.0555           0.0555         -0.000                    0.0             0.000
+Account Holder A IRA (Tax-Advantaged)         ITOT      HOLD          0.0064           0.0064         -0.000                    0.0             0.000
+Account Holder A IRA (Tax-Advantaged)         QUAL      HOLD          0.0051           0.0051         -0.000                    0.0             0.000
+Account Holder A IRA (Tax-Advantaged)          IJJ      HOLD          0.0039           0.0039         -0.000                    0.0             0.000
+Account Holder A IRA (Tax-Advantaged)         MTUM      HOLD          0.0041           0.0041         -0.000                    0.0             0.000
+Account Holder A IRA (Tax-Advantaged)         SCHH      HOLD          0.0020           0.0020         -0.000                    0.0             0.000
+Account Holder A IRA (Tax-Advantaged)         IEMG      HOLD          0.0031           0.0031         -0.000                    0.0             0.000
+Account Holder A IRA (Tax-Advantaged)          IWD      HOLD          0.0057           0.0057         -0.000                    0.0             0.000
+            Household Joint (Taxable)          SHV      HOLD          0.0030           0.0030          0.000                    0.0             0.000
+Account Holder A IRA (Tax-Advantaged)         SCHD      HOLD          0.0028           0.0028          0.000                    0.0             0.000
+            Household Joint (Taxable)          IJT      HOLD          0.0573           0.0573          0.000                    0.0             0.000
+            Household Joint (Taxable)         ITOT      HOLD          0.0680           0.0680          0.000                    0.0             0.000
+            Household Joint (Taxable)         MTUM      HOLD          0.0429           0.0429          0.000                    0.0             0.000
+            Household Joint (Taxable)          IJJ      HOLD          0.0617           0.0617          0.000                    0.0             0.000
+            Household Joint (Taxable)          IWD      HOLD          0.0631           0.0631          0.000                    0.0             0.000
+            Household Joint (Taxable)         IEFA      HOLD          0.0505           0.0505          0.000                    0.0             0.000
+                                 Cash CASH_RESERVE   RESERVE          0.0000           0.0247      55312.677                    0.0             0.000
+            Household Joint (Taxable)         SCHD       BUY          0.0751           0.1376     139687.323                    0.0             0.000

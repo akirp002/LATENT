@@ -1,0 +1,39 @@
+flowchart TD
+  RETS[(holdings_household_monthly_returns.csv\nmonthly pct returns)] --> SCEN
+  BENCHW[(benchmark_wealth_curve.csv\nBenchmark_Return)] --> SCEN
+  FF[(FF_plus_macro_workable.csv\nFF5 + RF)] --> BETAS
+  RETS --> BETAS[regress_tickers / residual_covariance\noptimize_tax_cvar_mvo.py\nHAC OLS beta + idio residual var]
+
+  SCEN[analytics.risk.scenario_matrix\noverlapping 12-mo arithmetic scenarios] --> ASCEN[A_scen, bench_annual\nticker x scenario matrix]
+  ASCEN --> CVAR[analytics.risk.active_cvar\nworst-5%-of-58 tail mean]
+  BETAS --> SIGMA[blended_factor_covariance\nFF5 covariance, annualized]
+  BETAS --> OMEGA[idio covariance\nshrunk residual variance]
+  SIGMA --> TE[te_of\nquadratic form: db' Sigma db + w' Omega w\nlocal to optimize_tax_cvar_mvo.py,\nNOT yet analytics.risk.tracking_error]
+  OMEGA --> TE
+
+  CVAR --> SOLVE[solve\nSLSQP QP: min TE(x)\ns.t. CVaR floor -15%, tax budget 2%]
+  TE --> SOLVE
+  SOLVE --> TRADES[(trade_proposals_path*.csv\npath_metrics.json)]
+
+  TRADES --> ATTR[portfolio_risk_attribution.py\nEuler CTR_k split of TE;\nreuses same A_scen/active_cvar for\nper-factor CVaR contribution]
+  ATTR --> RISKJSON[(risk_attribution.json)]
+
+  TRADES --> DASH[generate_rebalance_dashboard.py]
+  RISKJSON --> DASH
+  DASH --> DASHHTML[[rebalance_dashboard.html]]
+
+  TRADES -.-> COLLARLOAD[demos/collar-strategy/collar_cvar_analysis.py\nload_all_data reuses build_cvar_scenarios]
+  ASCEN -.-> COLLARLOAD
+  COLLARLOAD -.-> CLIP[blended_cvar_of\nclip MSTR row to put floor/call cap,\nlinear coverage blend]
+  CLIP -.-> COLLARHTML[[demos/collar-strategy/\npost_collar_trade_CVAR_Analytics.html]]
+  TRADES -.-> SAATE[demos/collar-strategy/saa_benchmark_te.py\nscores every path vs. SAA sleeve TE\noptimize_saa_mvo.saa_te_of]
+  SAATE -.-> COLLARHTML
+
+  FF -.-> ROLLING[benchmark_tracking_error_model.py\nsynthetic portfolio, ROLLING 36-mo betas\n+ Ledoit-Wolf shrunk covariance]
+  ROLLING -.-> ROLLOUT[(rolling_realized_te.csv\ntracking_error_summary.txt)]
+  ROLLOUT -.-> DOCSIDX[[docs/index.html\nshowcase charts]]
+
+  classDef real fill:#d9f2e6,stroke:#19734a
+  classDef demo fill:#fff1cc,stroke:#a66b00
+  class RETS,BENCHW,FF,BETAS,SCEN,ASCEN,CVAR,SIGMA,OMEGA,TE,SOLVE,TRADES,ATTR,RISKJSON,DASH,DASHHTML real
+  class COLLARLOAD,CLIP,COLLARHTML,SAATE,ROLLING,ROLLOUT,DOCSIDX demo

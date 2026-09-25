@@ -1,0 +1,6 @@
+import pandas as pd
+
+
+df = pd.read_csv(r'C:\Users\ak\OneDrive\Desktop\Stuff\Python projects\Data\F-F_Research_Data_Factors.csv')
+
+print(df.head(10))

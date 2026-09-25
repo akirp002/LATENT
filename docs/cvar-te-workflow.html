@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>CVaR / tracking-error workflow</title>
+<style>body{font:16px system-ui;max-width:1100px;margin:2rem auto;color:#17202a}
+pre{background:#f5f7f9;padding:1.2rem;white-space:pre-wrap;border:1px solid #ccd;font-size:13px}
+.note{padding:.7rem;background:#d9f2e6}.demo{padding:.7rem;background:#fff1cc}
+code{background:#eef1f4;padding:0 .25rem}</style>
+<h1>CVaR / tracking-error computation workflow</h1>
+<p class="note"><b>Real track:</b> monthly returns and the benchmark wealth
+curve feed <code>analytics.risk.scenario_matrix</code>, which builds the
+overlapping 12-month scenario matrix that
+<code>analytics.risk.active_cvar</code> turns into Active CVaR. Betas and
+residual variance feed <code>optimize_tax_cvar_mvo.py</code>'s own
+<code>te_of</code> quadratic form (factor covariance + idiosyncratic term —
+not yet routed through <code>analytics.risk.tracking_error</code>). Both
+feed the SLSQP solve, whose trade proposals feed
+<code>portfolio_risk_attribution.py</code>'s per-factor Euler decomposition
+and <code>generate_rebalance_dashboard.py</code>.</p>
+<p class="demo"><b>Demo boundary:</b> the MSTR collar what-if
+(<code>demos/collar-strategy/</code>) and the SAA-benchmark TE re-scorer
+read the real optimizer's saved trade proposals and scenario matrix but
+never re-optimize or write back into them. The rolling-beta/Ledoit-Wolf
+prototype (<code>benchmark_tracking_error_model.py</code>) is a fully
+separate, synthetic-portfolio TE model feeding only the docs showcase.</p>
+<pre>holdings_household_monthly_returns.csv ─┐
+benchmark_wealth_curve.csv ─────────┼─> analytics.risk.scenario_matrix ─> A_scen, bench_annual
+                                     │                                         │
+FF_plus_macro_workable.csv ─> regress_tickers / residual_covariance           v
+  (optimize_tax_cvar_mvo.py: HAC OLS beta + idio residual var)      analytics.risk.active_cvar
+        │                    │                                       (worst 5% of 58 scenarios)
+        v                    v                                                │
+  blended_factor_       idio covariance                                       │
+  covariance (Sigma)    (Omega, shrunk)                                       │
+        │                    │                                                │
+        └──────────┬─────────┘                                                │
+                    v                                                         │
+              te_of(x): sqrt(db'.Sigma.db + w'.Omega.w)                       │
+              [local to optimize_tax_cvar_mvo.py -- NOT                       │
+               analytics.risk.tracking_error yet]                             │
+                    │                                                         │
+                    └───────────────────┬─────────────────────────────────────┘
+                                         v
+                          solve(): SLSQP QP -- min TE(x)
+                          s.t. CVaR floor -15%, tax budget 2%
+                                         │
+                                         v
+                    trade_proposals_path*.csv, path_metrics.json
+                                         │
+                    ┌────────────────────┼─────────────────────────────┐
+                    v                                                   v
+      portfolio_risk_attribution.py                          generate_rebalance_dashboard.py
+      (Euler CTR_k split of TE; per-factor                              │
+       CVaR contribution, same A_scen/active_cvar)                      v
+                    │                                          rebalance_dashboard.html
+                    v
+          risk_attribution.json ──────────────────────────────────────>┘
+
+                    [demo, dashed -- reads real trades/scenarios, never re-optimizes]
+      trade_proposals_path*.csv, A_scen  - - -> demos/collar-strategy/collar_cvar_analysis.py
+                                                   (blended_cvar_of: clip MSTR row to
+                                                    put floor/call cap, coverage blend)
+      trade_proposals_path*.csv          - - -> demos/collar-strategy/saa_benchmark_te.py
+                                                   (optimize_saa_mvo.saa_te_of on every path)
+                                                          │
+                                                          v
+                                    demos/collar-strategy/post_collar_trade_CVAR_Analytics.html
+
+                    [demo, dashed -- fully separate synthetic portfolio]
+      FF_plus_macro_workable.csv  - - -> benchmark_tracking_error_model.py
+                                            (rolling 36-mo betas + Ledoit-Wolf
+                                             shrunk covariance, NOT scenario-based)
+                                                │
+                                                v
+                                  rolling_realized_te.csv, tracking_error_summary.txt
+                                                │
+                                                v
+                                        docs/index.html showcase charts
+</pre>
+<p>Source: <a href="cvar-te-workflow.mmd">cvar-te-workflow.mmd</a>. Green
+nodes in that file (<code>classDef real</code>) are the production CVaR/TE
+path; yellow nodes (<code>classDef demo</code>) are what-if or synthetic
+analyses that read from it but are never fed back in. See also the
+higher-level <a href="canonical-workflow.html">canonical-workflow.html</a>
+for the whole ingestion-to-report pipeline.</p>
+</html>

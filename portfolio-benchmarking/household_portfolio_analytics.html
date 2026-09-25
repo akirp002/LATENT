@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portfolio Analytics — Household</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
+:root {
+  --bg:#f6f7fa; --surface:#ffffff; --card:#ffffff; --border:#e2e6ef; --border2:#cdd4e2;
+  --text:#1e2536; --muted:#6b7590; --dim:#9aa3ba;
+  --accent:#2563eb; --green:#0d9478; --red:#dc3545; --amber:#d97706;
+  --purple:#7c5ce0; --teal:#0891b2; --pink:#db2777;
+  --shadow:0 1px 3px rgba(20,30,60,.06),0 1px 2px rgba(20,30,60,.04);
+  --mono:'IBM Plex Mono',monospace; --sans:'IBM Plex Sans',system-ui,sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:13px}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;line-height:1.5}
+.terminal-header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:stretch;height:56px;position:sticky;top:0;z-index:100;box-shadow:var(--shadow)}
+.terminal-id{display:flex;align-items:center;gap:10px;padding-right:24px;border-right:1px solid var(--border);margin-right:24px}
+.terminal-dot{width:8px;height:8px;border-radius:50%;background:var(--red);box-shadow:0 0 6px var(--red)66;animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.terminal-label{font-family:var(--mono);font-size:10px;font-weight:500;color:var(--muted);letter-spacing:.12em;text-transform:uppercase}
+.terminal-name{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--text)}
+.header-metrics{display:flex;align-items:center;flex:1;overflow-x:auto}
+.hm{display:flex;flex-direction:column;justify-content:center;padding:0 16px;border-right:1px solid var(--border);height:100%;flex-shrink:0}
+.hm-label{font-family:var(--mono);font-size:8.5px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:1px}
+.hm-value{font-family:var(--mono);font-size:14px;font-weight:600;color:var(--text);letter-spacing:-.01em}
+.header-right{margin-left:auto;display:flex;align-items:center;padding-left:16px;flex-shrink:0}
+.as-of{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.08em;white-space:nowrap}
+.layout{display:flex;height:calc(100vh - 56px)}
+.sidebar{width:170px;min-width:170px;background:var(--surface);border-right:1px solid var(--border);padding:20px 0;display:flex;flex-direction:column;gap:2px}
+.nav-section{padding:0 14px 8px;font-family:var(--mono);font-size:8.5px;color:var(--dim);letter-spacing:.12em;text-transform:uppercase;margin-top:12px}
+.nav-item{display:flex;align-items:center;gap:8px;padding:7px 16px;cursor:pointer;font-family:var(--mono);font-size:11px;color:var(--muted);border-left:2px solid transparent;user-select:none;transition:all .1s}
+.nav-item:hover{background:#2563eb08;color:var(--text)}
+.nav-item.active{color:var(--accent);border-left-color:var(--accent);background:#2563eb0a;font-weight:600}
+.nav-icon{font-size:13px;width:16px}
+.main{flex:1;overflow-y:auto;padding:20px 24px}
+.tab-section{display:none}.tab-section.active{display:block}
+.row{display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.col{flex:1;min-width:0}.col-2{flex:2;min-width:0}
+.col-fixed-280{width:280px;min-width:280px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px;box-shadow:var(--shadow)}
+.card-head{font-family:var(--mono);font-size:8.5px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.card-head::after{content:'';flex:1;height:1px;background:var(--border)}
+.card-sub{font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:-6px;margin-bottom:10px}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:10px;margin-bottom:12px}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 13px;box-shadow:var(--shadow)}
+.stat-label{font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
+.stat-value{font-family:var(--mono);font-size:18px;font-weight:600;line-height:1;letter-spacing:-.02em}
+.stat-sub{font-size:9.5px;color:var(--muted);margin-top:3px;font-family:var(--mono)}
+.green{color:var(--green)!important}.red{color:var(--red)!important}.amber{color:var(--amber)!important}
+.accent{color:var(--accent)!important}.purple{color:var(--purple)!important}.teal{color:var(--teal)!important}
+.alert-card{background:linear-gradient(135deg,#fef2f2,#fff);border:1px solid var(--red)55;border-radius:8px;padding:16px 18px;margin-bottom:12px}
+.alert-head{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--red);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.acct-split{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.acct-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px;box-shadow:var(--shadow)}
+.acct-label{font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
+.acct-value{font-family:var(--mono);font-size:22px;font-weight:700;letter-spacing:-.02em}
+.acct-pct{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:4px}
+.pct-bar{height:3px;background:var(--border);border-radius:3px;margin-top:10px}
+.pct-bar-fill{height:3px;border-radius:3px}
+.risk-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:12px}
+.risk-cell{background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:9px 12px}
+.risk-label{font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px}
+.risk-value{font-family:var(--mono);font-size:15px;font-weight:600}
+.risk-sub{font-size:9px;color:var(--muted);margin-top:2px;font-family:var(--mono)}
+.scen-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px}
+.scen-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.scen-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.scen-a::before{background:var(--accent)}.scen-b::before{background:var(--amber)}.scen-c::before{background:var(--purple)}
+.scen-title{font-family:var(--mono);font-size:11px;font-weight:700;margin-bottom:2px}
+.scen-sub{font-size:9.5px;color:var(--muted);margin-bottom:12px;font-family:var(--mono);line-height:1.4}
+.scen-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px}
+.scen-met{background:var(--bg);border-radius:5px;padding:7px 8px;text-align:center}
+.scen-met-l{font-family:var(--mono);font-size:7.5px;color:var(--muted);margin-bottom:2px;text-transform:uppercase}
+.scen-met-v{font-family:var(--mono);font-size:13px;font-weight:700}
+.scen-terminal{display:flex;justify-content:space-between;border-top:1px solid var(--border);padding-top:10px}
+.scen-t-item{text-align:center}
+.scen-t-l{font-family:var(--mono);font-size:8px;color:var(--muted)}
+.scen-t-v{font-family:var(--mono);font-size:12px;font-weight:700}
+.tbl-wrap{overflow-x:auto}
+table.pos{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:10.5px}
+table.pos thead tr{background:var(--bg)}
+table.pos th{padding:7px 10px;text-align:left;font-size:8px;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;border-bottom:2px solid var(--border2);white-space:nowrap;cursor:pointer}
+table.pos td{padding:5px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
+table.pos tr:hover td{background:#2563eb04}
+.tag{display:inline-block;font-family:var(--mono);font-size:8px;font-weight:700;padding:1px 5px;border-radius:3px}
+.tag-joint{background:#2563eb10;color:var(--accent);border:1px solid #2563eb30}
+.tag-ira{background:#0891b210;color:var(--teal);border:1px solid #0891b230}
+.wbar{display:flex;align-items:center;gap:5px}
+.wbar-track{height:3px;border-radius:2px;display:inline-block}
+.chart-wrap{position:relative}
+.toggle-row{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+.toggle-btn{font-family:var(--mono);font-size:10px;padding:5px 12px;border-radius:5px;border:1px solid var(--border2);background:var(--surface);color:var(--muted);cursor:pointer}
+.toggle-btn.on{border-color:var(--accent);background:#2563eb0d;color:var(--accent);font-weight:700}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+</style>
+</head>
+<body>
+
+<header class="terminal-header">
+  <div class="terminal-id">
+    <div class="terminal-dot"></div>
+    <div><div class="terminal-label">Portfolio Terminal</div><div class="terminal-name">Household // Joint + IRA (fabricated demo data)</div></div>
+  </div>
+  <div class="header-metrics">
+    <div class="hm"><div class="hm-label">Total AUM</div><div class="hm-value accent">$2,235,600</div></div>
+    <div class="hm"><div class="hm-label">MSTR Weight</div><div class="hm-value red">29.1%</div></div>
+    <div class="hm"><div class="hm-label">Beta</div><div class="hm-value amber">1.147</div></div>
+    <div class="hm"><div class="hm-label">Vol</div><div class="hm-value amber">30.0%</div></div>
+    <div class="hm"><div class="hm-label">VaR 95%</div><div class="hm-value red">-49.3%</div></div>
+    <div class="hm"><div class="hm-label">Blended ER</div><div class="hm-value teal">4.78bps</div></div>
+  </div>
+  <div class="header-right"><div class="as-of">FABRICATED DEMO SNAPSHOT -- NOT REAL DATA</div></div>
+</header>
+
+<div class="layout">
+  <nav class="sidebar">
+    <div class="nav-section">Portfolio</div>
+    <div class="nav-item active" onclick="showTab('overview',this)"><span class="nav-icon">&#9670;</span> Overview</div>
+    <div class="nav-item" onclick="showTab('allocation',this)"><span class="nav-icon">&#11049;</span> Allocation</div>
+    <div class="nav-item" onclick="showTab('risk',this)"><span class="nav-icon">&#9678;</span> Risk &amp; TE</div>
+    <div class="nav-item" onclick="showTab('holdings',this)"><span class="nav-icon">&#9736;</span> Holdings Deep-Dive</div>
+    <div class="nav-section">CMA Analysis</div>
+    <div class="nav-item" onclick="showTab('scenarios',this)"><span class="nav-icon">&#9670;</span> CMA Scenarios</div>
+    <div class="nav-item" onclick="showTab('positions',this)"><span class="nav-icon">&#8801;</span> Positions</div>
+  </nav>
+
+  <main class="main">
+
+    <div id="tab-overview" class="tab-section active">
+      <div class="alert-card">
+        <div class="alert-head">&#9888; Concentration Flag</div>
+        <div style="font-size:12px;color:var(--text);line-height:1.6">
+          <strong>MSTR (MicroStrategy) is 29.1% of the entire portfolio</strong> &mdash; $650,000 in a single stock with a cost basis of just $24,998 (a 2,500% unrealized gain). This is a fabricated illustration of a concentrated bet sitting inside an otherwise textbook-diversified factor/ETF sleeve. The top 3 positions are 44.3% of the portfolio; top 5 are 57.7%. Everything else in this analysis is computed with MSTR included &mdash; the risk numbers below are meaningfully worse than they'd look at a glance.
+        </div>
+      </div>
+      <div class="stat-grid">
+        <div class="stat"><div class="stat-label">Total Portfolio</div><div class="stat-value accent">$2,235,600</div>
+          <div class="stat-sub">Joint: $2,161,600 &middot; IRA: $74,000</div></div>
+        <div class="stat"><div class="stat-label">Unrealized Gain</div><div class="stat-value green">+$1,201,472</div>
+          <div class="stat-sub">+116% on cost basis</div></div>
+        <div class="stat"><div class="stat-label">Portfolio Beta</div><div class="stat-value amber">1.147</div>
+          <div class="stat-sub">vs S&amp;P 500 &mdash; elevated by MSTR</div></div>
+        <div class="stat"><div class="stat-label">Portfolio Vol</div><div class="stat-value red">30.0%</div>
+          <div class="stat-sub">Nearly 2x a diversified equity portfolio</div></div>
+        <div class="stat"><div class="stat-label">Tracking Error</div><div class="stat-value red">17.5%</div>
+          <div class="stat-sub">Very high active risk vs SPY</div></div>
+        <div class="stat"><div class="stat-label">Blended ER</div><div class="stat-value teal">4.78bps</div>
+          <div class="stat-sub">Excellent &mdash; nearly all sub-15bps funds</div></div>
+      </div>
+      <div class="acct-split">
+        <div class="acct-card"><div class="acct-label">Joint Taxable Account</div>
+          <div class="acct-value accent">$2,161,600</div>
+          <div class="acct-pct">96.7% of combined portfolio</div>
+          <div class="pct-bar"><div class="pct-bar-fill" style="width:96.7%;background:var(--accent)"></div></div></div>
+        <div class="acct-card"><div class="acct-label">Account Holder A's IRA</div>
+          <div class="acct-value green">$74,000</div>
+          <div class="acct-pct">3.3% of combined portfolio</div>
+          <div class="pct-bar"><div class="pct-bar-fill" style="width:3.3%;background:var(--green)"></div></div></div>
+      </div>
+      <div class="card">
+        <div class="card-head">Risk Snapshot &middot; VaR shown as % of portfolio</div>
+        <div class="risk-grid">
+          <div class="risk-cell"><div class="risk-label">1-Yr VaR 95%</div><div class="risk-value red">-49.34%</div>
+            <div class="risk-sub">-$1,103,076</div></div>
+          <div class="risk-cell"><div class="risk-label">1-Yr VaR 99%</div><div class="risk-value red">-69.77%</div>
+            <div class="risk-sub">-$1,559,730</div></div>
+          <div class="risk-cell"><div class="risk-label">Active VaR 95%</div><div class="risk-value purple">&plusmn;28.74%</div>
+            <div class="risk-sub">&plusmn;$642,601 vs SPY</div></div>
+          <div class="risk-cell"><div class="risk-label">HHI Score</div><div class="risk-value amber">1229</div>
+            <div class="risk-sub">1000-1500 = moderately concentrated</div></div>
+          <div class="risk-cell"><div class="risk-label">Top 3 Weight</div><div class="risk-value red">44.3%</div>
+            <div class="risk-sub">MSTR + SCHD + ITOT</div></div>
+          <div class="risk-cell"><div class="risk-label"># Positions</div><div class="risk-value teal">24</div>
+            <div class="risk-sub">23 diversified + 1 concentrated</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-allocation" class="tab-section">
+      <div class="row">
+        <div class="col"><div class="card">
+          <div class="card-head">Asset Class Breakdown &middot; note the MSTR bar</div>
+          <div class="chart-wrap" style="height:340px"><canvas id="acBar"></canvas></div>
+        </div></div>
+      </div>
+      <div class="card">
+        <div class="card-head">All Positions by Weight</div>
+        <div class="chart-wrap" style="height:280px"><canvas id="topBar"></canvas></div>
+      </div>
+    </div>
+
+    <div id="tab-risk" class="tab-section">
+      <div class="stat-grid">
+        <div class="stat"><div class="stat-label">Beta vs SPY</div><div class="stat-value amber">1.147</div></div>
+        <div class="stat"><div class="stat-label">Portfolio Vol</div><div class="stat-value red">30.0%</div></div>
+        <div class="stat"><div class="stat-label">Tracking Error</div><div class="stat-value red">17.5%</div></div>
+        <div class="stat"><div class="stat-label">1-Yr VaR 95%</div><div class="stat-value red">-49.34%</div></div>
+        <div class="stat"><div class="stat-label">Active VaR 95%</div><div class="stat-value purple">&plusmn;28.74%</div></div>
+      </div>
+      <div class="card">
+        <div class="card-head">Tracking Error Contribution by Position</div>
+        <div class="card-sub">MSTR alone contributes the majority of active risk</div>
+        <div class="chart-wrap" style="height:300px"><canvas id="teBar"></canvas></div>
+      </div>
+    </div>
+
+    <div id="tab-holdings" class="tab-section">
+      <div class="card" style="margin-bottom:12px">
+        <div class="card-head">Concentration Curve</div>
+        <div class="card-sub">cumulative weight by rank &mdash; the steep first step is MSTR alone</div>
+        <div class="chart-wrap" style="height:260px"><canvas id="concCurve"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-head">Contribution to Expected Return &middot; Scenario A</div>
+        <div class="card-sub">MSTR dominates both the risk AND the expected return of this portfolio</div>
+        <div class="chart-wrap" style="height:280px"><canvas id="contribBar"></canvas></div>
+      </div>
+    </div>
+
+    <div id="tab-scenarios" class="tab-section">
+      <div class="scen-grid">
+        <div class="scen-card scen-a">
+          <div class="scen-title accent">SCENARIO A &middot; TRI-BLEND</div>
+          <div class="scen-sub">1/3 Grinold-Kroner + 1/3 5-firm consensus + 1/3 house capital-market-assumption blend</div>
+          <div class="scen-metrics">
+            <div class="scen-met"><div class="scen-met-l">10yr</div><div class="scen-met-v accent">8.71%</div></div>
+            <div class="scen-met"><div class="scen-met-l">20yr</div><div class="scen-met-v accent">8.55%</div></div>
+            <div class="scen-met"><div class="scen-met-l">30yr</div><div class="scen-met-v accent">8.44%</div></div>
+          </div>
+          <div class="scen-terminal">
+            <div class="scen-t-item"><div class="scen-t-l">P10</div><div class="scen-t-v red">$0.7M</div></div>
+            <div class="scen-t-item"><div class="scen-t-l">P50</div><div class="scen-t-v accent">$25.9M</div></div>
+            <div class="scen-t-item"><div class="scen-t-l">P90</div><div class="scen-t-v green">$53.1M</div></div>
+          </div>
+        </div>
+        <div class="scen-card scen-b">
+          <div class="scen-title amber">SCENARIO B &middot; HALF-HALF</div>
+          <div class="scen-sub">1/2 Grinold-Kroner + 1/2 house capital-market-assumption blend</div>
+          <div class="scen-metrics">
+            <div class="scen-met"><div class="scen-met-l">10yr</div><div class="scen-met-v amber">8.33%</div></div>
+            <div class="scen-met"><div class="scen-met-l">20yr</div><div class="scen-met-v amber">8.22%</div></div>
+            <div class="scen-met"><div class="scen-met-l">30yr</div><div class="scen-met-v amber">8.15%</div></div>
+          </div>
+          <div class="scen-terminal">
+            <div class="scen-t-item"><div class="scen-t-l">P10</div><div class="scen-t-v red">$0.6M</div></div>
+            <div class="scen-t-item"><div class="scen-t-l">P50</div><div class="scen-t-v amber">$23.7M</div></div>
+            <div class="scen-t-item"><div class="scen-t-l">P90</div><div class="scen-t-v green">$48.6M</div></div>
+          </div>
+        </div>
+        <div class="scen-card scen-c">
+          <div class="scen-title purple">SCENARIO C &middot; PURE HOUSE VIEW</div>
+          <div class="scen-sub">100% house capital-market-assumption blend &mdash; no manager overlay</div>
+          <div class="scen-metrics">
+            <div class="scen-met"><div class="scen-met-l">10yr</div><div class="scen-met-v purple">6.79%</div></div>
+            <div class="scen-met"><div class="scen-met-l">20yr</div><div class="scen-met-v purple">6.60%</div></div>
+            <div class="scen-met"><div class="scen-met-l">30yr</div><div class="scen-met-v purple">6.47%</div></div>
+          </div>
+          <div class="scen-terminal">
+            <div class="scen-t-item"><div class="scen-t-l">P10</div><div class="scen-t-v red">$0.4M</div></div>
+            <div class="scen-t-item"><div class="scen-t-l">P50</div><div class="scen-t-v purple">$15.1M</div></div>
+            <div class="scen-t-item"><div class="scen-t-l">P90</div><div class="scen-t-v green">$31.2M</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head">Net CAGR by Horizon</div>
+        <div class="chart-wrap" style="height:240px"><canvas id="scenBar"></canvas></div>
+      </div>
+    </div>
+
+    <div id="tab-positions" class="tab-section">
+      <div class="toggle-row">
+        <span style="font-family:var(--mono);font-size:9px;color:var(--muted)">SORT:</span>
+        <button class="toggle-btn on" id="sort-w" onclick="sortTable('w',this)">Weight</button>
+        <button class="toggle-btn" id="sort-ugl" onclick="sortTable('ugl',this)">UGL</button>
+        <span id="pos-count" style="margin-left:auto;font-family:var(--mono);font-size:9px;color:var(--muted)">24 positions</span>
+      </div>
+      <div class="card" style="padding:0">
+        <div class="tbl-wrap">
+          <table class="pos">
+            <thead><tr>
+              <th>Acct</th><th>Sym</th><th>Value</th><th>Wt%</th><th>Beta</th><th>TE%</th><th>Vol%</th><th>ER bps</th>
+              <th>Unreal G/L</th><th class="accent">CMA A</th><th class="amber">CMA B</th><th class="purple">CMA C</th><th>Asset Class</th>
+            </tr></thead>
+            <tbody id="pos-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+const C = {accent:'#2563eb',green:'#0d9478',red:'#dc3545',amber:'#d97706',purple:'#7c5ce0',teal:'#0891b2',muted:'#6b7590',border:'#e2e6ef'};
+Chart.defaults.color = C.muted; Chart.defaults.borderColor = C.border;
+Chart.defaults.font.family = "'IBM Plex Mono', monospace"; Chart.defaults.font.size = 10;
+
+const TOTAL = 2235600.0;
+const SCEN = {
+  A: {10:0.0871, 20:0.0855, 30:0.0844},
+  B: {10:0.0833, 20:0.0822, 30:0.0815},
+  C: {10:0.0679, 20:0.0660, 30:0.0647},
+};
+const AC = [{"n": "Single Stock (Growth)", "w": 29.07}, {"n": "US Dividend", "w": 7.79}, {"n": "US Total Market", "w": 7.43}, {"n": "US Large Value", "w": 6.88}, {"n": "US Mid Value", "w": 6.57}, {"n": "Emerging Markets", "w": 6.35}, {"n": "US Quality Factor", "w": 5.79}, {"n": "US Small Growth", "w": 5.73}, {"n": "US Small Value", "w": 5.55}, {"n": "Intl Developed", "w": 5.05}, {"n": "US Momentum Factor", "w": 4.71}, {"n": "US Large Growth", "w": 4.03}, {"n": "US Mid Growth", "w": 3.67}, {"n": "US REIT", "w": 0.56}, {"n": "US Materials", "w": 0.54}, {"n": "Short Treasury", "w": 0.29}];
+const CONTRIB = [{"s": "MSTR", "a": "Joint", "w": 29.075, "cma": 10.9, "contrib": 3.1692}, {"s": "IEMG", "a": "Joint", "w": 6.039, "cma": 9.28, "contrib": 0.5604}, {"s": "SCHD", "a": "Joint", "w": 7.515, "cma": 7.38, "contrib": 0.5546}, {"s": "ITOT", "a": "Joint", "w": 6.799, "cma": 7.12, "contrib": 0.4841}, {"s": "IWD", "a": "Joint", "w": 6.307, "cma": 7.42, "contrib": 0.468}, {"s": "IJJ", "a": "Joint", "w": 6.173, "cma": 7.55, "contrib": 0.4661}, {"s": "IJT", "a": "Joint", "w": 5.726, "cma": 7.95, "contrib": 0.4552}, {"s": "IJS", "a": "Joint", "w": 5.547, "cma": 7.85, "contrib": 0.4354}, {"s": "IEFA", "a": "Joint", "w": 5.055, "cma": 8.07, "contrib": 0.4079}, {"s": "QUAL", "a": "Joint", "w": 5.278, "cma": 7.38, "contrib": 0.3895}, {"s": "MTUM", "a": "Joint", "w": 4.294, "cma": 7.38, "contrib": 0.3169}, {"s": "IWF", "a": "Joint", "w": 4.026, "cma": 7.12, "contrib": 0.2867}, {"s": "IJK", "a": "Joint", "w": 3.668, "cma": 7.55, "contrib": 0.2769}, {"s": "ITOT", "a": "IRA", "w": 0.635, "cma": 7.12, "contrib": 0.0452}, {"s": "IWD", "a": "IRA", "w": 0.573, "cma": 7.42, "contrib": 0.0425}];
+const CONC = [{"rank": 1, "cum": 29.07}, {"rank": 3, "cum": 43.39}, {"rank": 5, "cum": 55.87}, {"rank": 10, "cum": 83.51}, {"rank": 15, "cum": 96.71}, {"rank": 20, "cum": 98.92}, {"rank": 24, "cum": 100.0}];
+const POSITIONS = [{"a": "Joint", "s": "MSTR", "v": 650000, "w": 29.075, "b": 1.62, "te": 42.0, "vl": 58, "cb": 24998, "ugl": 625002, "er": 0, "cmaA": 10.9, "cmaB": 10.7, "cmaC": 6.75, "ac": "Single Stock (Growth)"}, {"a": "Joint", "s": "SCHD", "v": 168000, "w": 7.515, "b": 0.85, "te": 6.0, "vl": 15, "cb": 134720, "ugl": 33280, "er": 6, "cmaA": 7.38, "cmaB": 6.88, "cmaC": 6.75, "ac": "US Dividend"}, {"a": "Joint", "s": "ITOT", "v": 152000, "w": 6.799, "b": 1.0, "te": 1.0, "vl": 16, "cb": 92475, "ugl": 59525, "er": 3, "cmaA": 7.12, "cmaB": 6.62, "cmaC": 6.75, "ac": "US Total Market"}, {"a": "Joint", "s": "IWD", "v": 141000, "w": 6.307, "b": 0.88, "te": 6.5, "vl": 16, "cb": 86100, "ugl": 54900, "er": 4, "cmaA": 7.42, "cmaB": 6.73, "cmaC": 6.75, "ac": "US Large Value"}, {"a": "Joint", "s": "IJJ", "v": 138000, "w": 6.173, "b": 0.95, "te": 8.0, "vl": 19, "cb": 86520, "ugl": 51480, "er": 7, "cmaA": 7.55, "cmaB": 6.83, "cmaC": 6.75, "ac": "US Mid Value"}, {"a": "Joint", "s": "IEMG", "v": 135000, "w": 6.039, "b": 0.85, "te": 12.0, "vl": 21, "cb": 106600, "ugl": 28400, "er": 8, "cmaA": 9.28, "cmaB": 8.72, "cmaC": 8.75, "ac": "Emerging Markets"}, {"a": "Joint", "s": "IJT", "v": 128000, "w": 5.726, "b": 1.15, "te": 10.0, "vl": 24, "cb": 75950, "ugl": 52050, "er": 7, "cmaA": 7.95, "cmaB": 7.28, "cmaC": 6.75, "ac": "US Small Growth"}, {"a": "Joint", "s": "IJS", "v": 124000, "w": 5.547, "b": 1.0, "te": 9.0, "vl": 22, "cb": 61750, "ugl": 62250, "er": 7, "cmaA": 7.85, "cmaB": 7.23, "cmaC": 6.75, "ac": "US Small Value"}, {"a": "Joint", "s": "QUAL", "v": 118000, "w": 5.278, "b": 0.95, "te": 6.0, "vl": 17, "cb": 76440, "ugl": 41560, "er": 13, "cmaA": 7.38, "cmaB": 6.88, "cmaC": 6.75, "ac": "US Quality Factor"}, {"a": "Joint", "s": "IEFA", "v": 113000, "w": 5.055, "b": 0.78, "te": 9.5, "vl": 17, "cb": 69795, "ugl": 43205, "er": 3, "cmaA": 8.07, "cmaB": 7.61, "cmaC": 7.92, "ac": "Intl Developed"}, {"a": "Joint", "s": "MTUM", "v": 96000, "w": 4.294, "b": 1.05, "te": 8.0, "vl": 20, "cb": 56700, "ugl": 39300, "er": 13, "cmaA": 7.38, "cmaB": 6.78, "cmaC": 6.75, "ac": "US Momentum Factor"}, {"a": "Joint", "s": "IWF", "v": 90000, "w": 4.026, "b": 1.12, "te": 6.0, "vl": 19, "cb": 45500, "ugl": 44500, "er": 4, "cmaA": 7.12, "cmaB": 6.73, "cmaC": 6.75, "ac": "US Large Growth"}, {"a": "Joint", "s": "IJK", "v": 82000, "w": 3.668, "b": 1.05, "te": 8.5, "vl": 20, "cb": 41440, "ugl": 40560, "er": 7, "cmaA": 7.55, "cmaB": 6.93, "cmaC": 6.75, "ac": "US Mid Growth"}, {"a": "IRA", "s": "ITOT", "v": 14200, "w": 0.635, "b": 1.0, "te": 1.0, "vl": 16, "cb": 8450, "ugl": 5750, "er": 3, "cmaA": 7.12, "cmaB": 6.62, "cmaC": 6.75, "ac": "US Total Market"}, {"a": "IRA", "s": "IWD", "v": 12800, "w": 0.573, "b": 0.88, "te": 6.5, "vl": 16, "cb": 8330, "ugl": 4470, "er": 4, "cmaA": 7.42, "cmaB": 6.73, "cmaC": 6.75, "ac": "US Large Value"}, {"a": "Joint", "s": "XLB", "v": 12000, "w": 0.537, "b": 1.0, "te": 9.0, "vl": 19, "cb": 9520, "ugl": 2480, "er": 9, "cmaA": 7.38, "cmaB": 6.68, "cmaC": 6.75, "ac": "US Materials"}, {"a": "IRA", "s": "QUAL", "v": 11400, "w": 0.51, "b": 0.95, "te": 6.0, "vl": 17, "cb": 8550, "ugl": 2850, "er": 13, "cmaA": 7.38, "cmaB": 6.88, "cmaC": 6.75, "ac": "US Quality Factor"}, {"a": "IRA", "s": "MTUM", "v": 9200, "w": 0.412, "b": 1.05, "te": 8.0, "vl": 20, "cb": 5390, "ugl": 3810, "er": 13, "cmaA": 7.38, "cmaB": 6.78, "cmaC": 6.75, "ac": "US Momentum Factor"}, {"a": "IRA", "s": "IJJ", "v": 8800, "w": 0.394, "b": 0.95, "te": 8.0, "vl": 19, "cb": 5250, "ugl": 3550, "er": 7, "cmaA": 7.55, "cmaB": 6.83, "cmaC": 6.75, "ac": "US Mid Value"}, {"a": "Joint", "s": "SCHH", "v": 8000, "w": 0.358, "b": 0.75, "te": 11.0, "vl": 18, "cb": 7942, "ugl": 58, "er": 6, "cmaA": 7.23, "cmaB": 7.09, "cmaC": 7.18, "ac": "US REIT"}, {"a": "IRA", "s": "IEMG", "v": 6900, "w": 0.309, "b": 0.85, "te": 12.0, "vl": 21, "cb": 5320, "ugl": 1580, "er": 8, "cmaA": 9.28, "cmaB": 8.72, "cmaC": 8.75, "ac": "Emerging Markets"}, {"a": "Joint", "s": "SHV", "v": 6600, "w": 0.295, "b": 0.05, "te": 16.0, "vl": 4, "cb": 6618, "ugl": -18, "er": 15, "cmaA": 4.48, "cmaB": 4.47, "cmaC": 4.75, "ac": "Short Treasury"}, {"a": "IRA", "s": "SCHD", "v": 6200, "w": 0.277, "b": 0.85, "te": 6.0, "vl": 15, "cb": 5700, "ugl": 500, "er": 6, "cmaA": 7.38, "cmaB": 6.88, "cmaC": 6.75, "ac": "US Dividend"}, {"a": "IRA", "s": "SCHH", "v": 4500, "w": 0.201, "b": 0.75, "te": 11.0, "vl": 18, "cb": 4070, "ugl": 430, "er": 6, "cmaA": 7.23, "cmaB": 7.09, "cmaC": 7.18, "ac": "US REIT"}];
+
+function showTab(name, el){
+  document.querySelectorAll('.tab-section').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  el.classList.add('active');
+  if(name==='allocation') buildAllocation();
+  if(name==='risk') buildRisk();
+  if(name==='holdings') buildHoldings();
+  if(name==='scenarios') buildScenarios();
+  if(name==='positions') renderTable();
+}
+
+function buildAllocation(){
+  new Chart(document.getElementById('acBar'), {type:'bar',
+    data:{labels:AC.map(a=>a.n), datasets:[{data:AC.map(a=>a.w),
+      backgroundColor:AC.map(a=>a.n.includes('Single')?C.red:C.accent), borderRadius:3}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw.toFixed(2)+'%'}}},
+      scales:{x:{ticks:{callback:v=>v.toFixed(0)+'%'}},y:{grid:{display:false}}}}});
+  const all = [...POSITIONS].sort((a,b)=>b.w-a.w);
+  new Chart(document.getElementById('topBar'), {type:'bar',
+    data:{labels:all.map(p=>p.s), datasets:[{data:all.map(p=>p.w),
+      backgroundColor:all.map(p=>p.s==='MSTR'?C.red:(p.a==='IRA'?C.teal:C.accent)), borderRadius:3}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>{const p=all[c.dataIndex];return c.raw.toFixed(2)+'%  $'+p.v.toLocaleString()+' ['+p.a+']';}}}},
+      scales:{x:{ticks:{maxRotation:90,minRotation:90}},y:{ticks:{callback:v=>v.toFixed(0)+'%'}}}}});
+}
+
+function buildRisk(){
+  const te = [...POSITIONS].map(p=>({s:p.s,tc:+(p.w/100*p.te).toFixed(2)})).sort((a,b)=>b.tc-a.tc);
+  new Chart(document.getElementById('teBar'), {type:'bar',
+    data:{labels:te.map(d=>d.s), datasets:[{data:te.map(d=>d.tc),
+      backgroundColor:te.map(d=>d.s==='MSTR'?C.red:C.accent), borderRadius:3}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw.toFixed(2)+'% TE contribution'}}},
+      scales:{x:{ticks:{callback:v=>v.toFixed(1)+'%'}},y:{grid:{display:false}}}}});
+}
+
+function buildHoldings(){
+  new Chart(document.getElementById('concCurve'), {type:'line',
+    data:{labels:CONC.map(c=>'Top '+c.rank), datasets:[{data:CONC.map(c=>c.cum),
+      borderColor:C.red, backgroundColor:C.red+'15', fill:true, borderWidth:2.5, pointRadius:4, tension:.2}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw.toFixed(1)+'%'}}},
+      scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%'}}}}});
+  new Chart(document.getElementById('contribBar'), {type:'bar',
+    data:{labels:CONTRIB.map(c=>c.s+' ['+c.a+']'), datasets:[{data:CONTRIB.map(c=>c.contrib),
+      backgroundColor:CONTRIB.map(c=>c.s==='MSTR'?C.red:C.accent), borderRadius:3}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>{const d=CONTRIB[c.dataIndex];return d.contrib.toFixed(2)+'pp (wt='+d.w.toFixed(1)+'%, cma='+d.cma.toFixed(1)+'%)';}}}},
+      scales:{x:{ticks:{callback:v=>v.toFixed(1)+'pp'}},y:{grid:{display:false}}}}});
+}
+
+function buildScenarios(){
+  new Chart(document.getElementById('scenBar'), {type:'bar',
+    data:{labels:['10yr','20yr','30yr'], datasets:[
+      {label:'A: Tri-Blend', data:[SCEN.A[10]*100,SCEN.A[20]*100,SCEN.A[30]*100], backgroundColor:C.accent, borderRadius:3},
+      {label:'B: Half-Half', data:[SCEN.B[10]*100,SCEN.B[20]*100,SCEN.B[30]*100], backgroundColor:C.amber, borderRadius:3},
+      {label:'C: Pure House View', data:[SCEN.C[10]*100,SCEN.C[20]*100,SCEN.C[30]*100], backgroundColor:C.purple, borderRadius:3},
+    ]},options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'top',labels:{boxWidth:10,padding:10}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+c.raw.toFixed(2)+'%'}}},
+      scales:{y:{ticks:{callback:v=>v.toFixed(1)+'%'}}}}});
+}
+
+let curSort='w';
+function sortTable(by, el){ curSort=by; document.querySelectorAll('[id^="sort-"]').forEach(b=>b.classList.remove('on')); el.classList.add('on'); renderTable(); }
+function renderTable(){
+  let rows=[...POSITIONS];
+  rows.sort((a,b)=> curSort==='w' ? b.w-a.w : (b.ugl||0)-(a.ugl||0));
+  document.getElementById('pos-tbody').innerHTML = rows.map(p=>{
+    const uglCol = p.ugl>=0?C.green:C.red;
+    const isMstr = p.s==='MSTR';
+    return `<tr style="${isMstr?'background:#fef2f2':''}">
+      <td><span class="tag tag-${p.a.toLowerCase()}">${p.a}</span></td>
+      <td style="color:${isMstr?C.red:C.accent};font-weight:700">${p.s}</td>
+      <td style="font-weight:600">$${p.v.toLocaleString()}</td>
+      <td><span class="wbar"><span class="wbar-track" style="width:${Math.max(2,p.w*2)}px;background:${isMstr?C.red:C.accent}"></span>${p.w.toFixed(2)}%</span></td>
+      <td>${p.b.toFixed(2)}</td><td>${p.te.toFixed(1)}</td><td>${p.vl.toFixed(0)}</td><td>${p.er}</td>
+      <td style="color:${uglCol}">$${Math.round(p.ugl).toLocaleString()}</td>
+      <td style="color:${C.accent}">${p.cmaA.toFixed(2)}%</td>
+      <td style="color:${C.amber}">${p.cmaB.toFixed(2)}%</td>
+      <td style="color:${C.purple}">${p.cmaC.toFixed(2)}%</td>
+      <td>${p.ac}</td>
+    </tr>`;
+  }).join('');
+}
+</script>
+</body>
+</html>

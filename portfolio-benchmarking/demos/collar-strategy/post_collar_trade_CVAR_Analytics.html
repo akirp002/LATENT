@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Post-Collar Trade CVaR Analytics</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1115; --card: #171a21; --border: #2a2f3a; --text: #e6e9ef; --sub: #9aa3b2;
+    --accent: #2fae62; --red: #e5484d;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif; padding: 24px 16px 60px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .sub { color: var(--sub); font-size: 14px; margin-bottom: 20px; max-width: 900px; line-height:1.5; }
+  .banner { border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; font-size: 13.5px; line-height:1.5; }
+  .banner.ok { background: rgba(47,174,98,0.12); border: 1px solid rgba(47,174,98,0.4); }
+  .banner.warn { background: rgba(229,72,77,0.12); border: 1px solid rgba(229,72,77,0.4); }
+  .banner.warn ul { margin: 6px 0 0 18px; padding:0; }
+  .meta-row { display:flex; gap:14px; flex-wrap:wrap; margin-bottom: 22px; }
+  .stat { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:12px 16px; min-width:150px; }
+  .stat-l { font-size:11px; color:var(--sub); text-transform:uppercase; letter-spacing:.04em; }
+  .stat-v { font-size:18px; font-weight:600; margin-top:2px; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:18px 20px; margin-bottom:18px; }
+  .card-h { font-size:15px; font-weight:600; margin-bottom:4px; }
+  .card-sub { font-size:12.5px; color:var(--sub); margin-bottom:12px; }
+  table { width:100%; border-collapse: collapse; font-size:13px; }
+  th, td { text-align:left; padding:7px 10px; border-bottom:1px solid var(--border); }
+  th { color: var(--sub); font-weight:500; font-size:11.5px; text-transform:uppercase; letter-spacing:.03em; }
+  td.num, th.num { text-align:right; font-variant-numeric: tabular-nums; }
+  .chart-grid { display:grid; grid-template-columns: 1.4fr 1fr; gap:18px; margin-bottom: 18px; }
+  .chart-grid .card { margin-bottom: 0; }
+  @media (max-width: 820px) { .chart-grid { grid-template-columns: 1fr; } }
+  .chart-wrap { height: 340px; }
+  .footnote { color: var(--sub); font-size: 11.5px; margin-top: 26px; line-height:1.6; max-width: 900px; }
+  code { background:#20242e; padding:1px 5px; border-radius:4px; font-size:12px; }
+</style>
+</head>
+<body>
+
+  <h1>Post-Collar Trade CVaR Analytics</h1>
+  <div class="sub">
+    Active CVaR (5th-percentile annual shortfall vs. the policy benchmark, same 58 overlapping
+    12-month scenarios and Oct-2020&ndash;Jun-2026 common history as the rebalance dashboard) for
+    each optimized trade path, with a zero-cost MSTR collar (put floor -10% / call cap
+    +20% per 12-month scenario window, no premium modeled) applied at four coverage
+    levels: none, 30%, 50%, and a full 100% collar on the post-trade MSTR position.
+  </div>
+
+  
+    <div class="banner ok">
+      &#10003; Every path's uncollared CVaR in this report matches Data/path_metrics.json
+      exactly (the same number the rebalance dashboard displays) &mdash; the collar scenarios
+      below are layered on top of that verified baseline, not a separately-derived number.
+    </div>
+
+  <div class="meta-row">
+    <div class="stat"><div class="stat-l">MSTR implied price</div><div class="stat-v">$448</div></div>
+    <div class="stat"><div class="stat-l">Put strike (&minus;10%)</div><div class="stat-v">$403</div></div>
+    <div class="stat"><div class="stat-l">Call strike (+20%)</div><div class="stat-v">$538</div></div>
+    <div class="stat"><div class="stat-l">Total household value</div><div class="stat-v">$2,235,600</div></div>
+  </div>
+
+  <div class="chart-grid">
+    <div class="card">
+      <div class="card-h">Active CVaR by Path &times; Collar Coverage</div>
+      <div class="card-sub">Bars are raw Active CVaR (not absolute value) &mdash; more negative is worse. Coverage blends MSTR's
+        raw and collared scenario return linearly (30% coverage = 30% of the MSTR position collared, 70% left naked).</div>
+      <div class="chart-wrap"><canvas id="cvarChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-h">Tracking Error by Path &mdash; Dashboard (line) vs. Scenario (bars)</div>
+      <div class="card-sub">The purple line is the dashboard's parametric factor-model TE (from
+        <code>path_metrics.json</code>) &mdash; fixed, does not move with the collar. The bars are the empirical
+        Scenario TE (std dev of the same 58 scenario active returns Active CVaR uses) at each coverage level &mdash;
+        this one DOES fall as more of MSTR is collared.</div>
+      <div class="chart-wrap"><canvas id="teChart"></canvas></div>
+    </div>
+  </div>
+
+  
+    <div class="card">
+      <div class="card-h">Overview &mdash; Tracking Error vs. Active CVaR</div>
+      <div class="card-sub">Three different TE numbers, deliberately: <b>Tracking Error (dashboard)</b> is each
+        path's OWN native benchmark &mdash; the FF5 max-Sharpe benchmark for Current/C/D, but a completely
+        different 13-sleeve Excel policy benchmark for SAA/SAA 3% (<code>optimize_saa_mvo.py</code>'s
+        <code>te_total()</code>) &mdash; so these numbers are <b>NOT comparable across paths</b>.
+        <b>SAA-benchmark TE</b> fixes that: it re-scores every path's SAME already-optimized post-trade weights
+        (no re-optimization, no path's trade changes) against the one SAA sleeve/policy benchmark, so this column
+        IS directly comparable path to path (see <code>saa_benchmark_te.py</code>). <b>Scenario TE</b> is a third,
+        separate thing again &mdash; the empirical std dev of the same 58 scenario active returns Active CVaR is
+        built from, which is the only one of the three that responds to the MSTR collar (compare its "no collar"
+        vs. "100% collar" columns).</div>
+      <table>
+        <thead><tr><th>Path</th><th>Tracking Error (dashboard, per-path benchmark)</th>
+          <th>SAA-benchmark TE (comparable)</th>
+          <th>Scenario TE (no collar)</th><th>Scenario TE (100% collar)</th>
+          <th>Active CVaR (no collar)</th><th>Active CVaR (100% collar)</th><th>CVaR improvement</th></tr></thead>
+        <tbody>
+        <tr>
+          <td>Current</td>
+          <td class="num">23.05%</td>
+          <td class="num">6.71%</td>
+          <td class="num">25.47%</td>
+          <td class="num">3.87%</td>
+          <td class="num">-22.96%</td>
+          <td class="num">-8.65%</td>
+          <td class="num">+14.31pp</td>
+        </tr>
+        <tr>
+          <td>Path C</td>
+          <td class="num">8.80%</td>
+          <td class="num">4.25%</td>
+          <td class="num">7.73%</td>
+          <td class="num">3.18%</td>
+          <td class="num">-7.71%</td>
+          <td class="num">-6.90%</td>
+          <td class="num">+0.81pp</td>
+        </tr>
+        <tr>
+          <td>Path D</td>
+          <td class="num">16.76%</td>
+          <td class="num">5.24%</td>
+          <td class="num">17.72%</td>
+          <td class="num">3.31%</td>
+          <td class="num">-15.51%</td>
+          <td class="num">-7.48%</td>
+          <td class="num">+8.03pp</td>
+        </tr>
+        <tr>
+          <td>SAA target</td>
+          <td class="num">3.93%</td>
+          <td class="num">3.93%</td>
+          <td class="num">12.86%</td>
+          <td class="num">2.81%</td>
+          <td class="num">-11.15%</td>
+          <td class="num">-6.28%</td>
+          <td class="num">+4.87pp</td>
+        </tr>
+        <tr>
+          <td>SAA 3%</td>
+          <td class="num">4.63%</td>
+          <td class="num">4.63%</td>
+          <td class="num">16.24%</td>
+          <td class="num">3.04%</td>
+          <td class="num">-14.10%</td>
+          <td class="num">-7.05%</td>
+          <td class="num">+7.05pp</td>
+        </tr></tbody>
+      </table>
+    </div>
+
+  
+    <div class="card">
+      <div class="card-h">Current</div>
+      <div class="card-sub">Post-trade MSTR weight <b>29.07%</b>
+        ($650,000 notional) &mdash; the full position available to collar. &middot; Tracking Error (dashboard) <b>23.05%</b> (unaffected by the collar)</div>
+      <table>
+        <thead><tr><th>Scenario</th><th>Active CVaR</th><th>vs. no collar</th><th>Scenario TE</th>
+          <th>Notional collared</th><th>Shares collared</th><th>Contracts</th></tr></thead>
+        <tbody>
+        <tr>
+          <td>No Collar</td>
+          <td class="num">-22.96%</td>
+          <td class="num">+0.00pp</td>
+          <td class="num">25.47%</td>
+          <td class="num">$0</td>
+          <td class="num">0</td>
+          <td class="num">0.0</td>
+        </tr>
+        <tr>
+          <td>30% Collar</td>
+          <td class="num">-17.22%</td>
+          <td class="num">+5.74pp</td>
+          <td class="num">18.25%</td>
+          <td class="num">$195,000</td>
+          <td class="num">435</td>
+          <td class="num">4.3</td>
+        </tr>
+        <tr>
+          <td>50% Collar</td>
+          <td class="num">-13.63%</td>
+          <td class="num">+9.33pp</td>
+          <td class="num">13.51%</td>
+          <td class="num">$325,000</td>
+          <td class="num">725</td>
+          <td class="num">7.2</td>
+        </tr>
+        <tr>
+          <td>Full 100% Collar</td>
+          <td class="num">-8.65%</td>
+          <td class="num">+14.31pp</td>
+          <td class="num">3.87%</td>
+          <td class="num">$650,000</td>
+          <td class="num">1,450</td>
+          <td class="num">14.5</td>
+        </tr></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="card-h">Path C</div>
+      <div class="card-sub">Post-trade MSTR weight <b>8.72%</b>
+        ($195,000 notional) &mdash; the full position available to collar. &middot; Tracking Error (dashboard) <b>8.80%</b> (unaffected by the collar)</div>
+      <table>
+        <thead><tr><th>Scenario</th><th>Active CVaR</th><th>vs. no collar</th><th>Scenario TE</th>
+          <th>Notional collared</th><th>Shares collared</th><th>Contracts</th></tr></thead>
+        <tbody>
+        <tr>
+          <td>No Collar</td>
+          <td class="num">-7.71%</td>
+          <td class="num">+0.00pp</td>
+          <td class="num">7.73%</td>
+          <td class="num">$0</td>
+          <td class="num">0</td>
+          <td class="num">0.0</td>
+        </tr>
+        <tr>
+          <td>30% Collar</td>
+          <td class="num">-7.20%</td>
+          <td class="num">+0.51pp</td>
+          <td class="num">5.79%</td>
+          <td class="num">$58,500</td>
+          <td class="num">130</td>
+          <td class="num">1.3</td>
+        </tr>
+        <tr>
+          <td>50% Collar</td>
+          <td class="num">-6.86%</td>
+          <td class="num">+0.84pp</td>
+          <td class="num">4.64%</td>
+          <td class="num">$97,500</td>
+          <td class="num">217</td>
+          <td class="num">2.2</td>
+        </tr>
+        <tr>
+          <td>Full 100% Collar</td>
+          <td class="num">-6.90%</td>
+          <td class="num">+0.81pp</td>
+          <td class="num">3.18%</td>
+          <td class="num">$195,000</td>
+          <td class="num">435</td>
+          <td class="num">4.3</td>
+        </tr></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="card-h">Path D</div>
+      <div class="card-sub">Post-trade MSTR weight <b>20.35%</b>
+        ($455,000 notional) &mdash; the full position available to collar. &middot; Tracking Error (dashboard) <b>16.76%</b> (unaffected by the collar)</div>
+      <table>
+        <thead><tr><th>Scenario</th><th>Active CVaR</th><th>vs. no collar</th><th>Scenario TE</th>
+          <th>Notional collared</th><th>Shares collared</th><th>Contracts</th></tr></thead>
+        <tbody>
+        <tr>
+          <td>No Collar</td>
+          <td class="num">-15.51%</td>
+          <td class="num">-0.00pp</td>
+          <td class="num">17.72%</td>
+          <td class="num">$0</td>
+          <td class="num">0</td>
+          <td class="num">0.0</td>
+        </tr>
+        <tr>
+          <td>30% Collar</td>
+          <td class="num">-11.70%</td>
+          <td class="num">+3.81pp</td>
+          <td class="num">12.71%</td>
+          <td class="num">$136,500</td>
+          <td class="num">304</td>
+          <td class="num">3.0</td>
+        </tr>
+        <tr>
+          <td>50% Collar</td>
+          <td class="num">-9.54%</td>
+          <td class="num">+5.98pp</td>
+          <td class="num">9.45%</td>
+          <td class="num">$227,500</td>
+          <td class="num">507</td>
+          <td class="num">5.1</td>
+        </tr>
+        <tr>
+          <td>Full 100% Collar</td>
+          <td class="num">-7.48%</td>
+          <td class="num">+8.03pp</td>
+          <td class="num">3.31%</td>
+          <td class="num">$455,000</td>
+          <td class="num">1,015</td>
+          <td class="num">10.1</td>
+        </tr></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="card-h">SAA target</div>
+      <div class="card-sub">Post-trade MSTR weight <b>14.54%</b>
+        ($325,000 notional) &mdash; the full position available to collar. &middot; Tracking Error (dashboard) <b>3.93%</b> (unaffected by the collar)</div>
+      <table>
+        <thead><tr><th>Scenario</th><th>Active CVaR</th><th>vs. no collar</th><th>Scenario TE</th>
+          <th>Notional collared</th><th>Shares collared</th><th>Contracts</th></tr></thead>
+        <tbody>
+        <tr>
+          <td>No Collar</td>
+          <td class="num">-11.15%</td>
+          <td class="num">-0.00pp</td>
+          <td class="num">12.86%</td>
+          <td class="num">$0</td>
+          <td class="num">0</td>
+          <td class="num">0.0</td>
+        </tr>
+        <tr>
+          <td>30% Collar</td>
+          <td class="num">-8.74%</td>
+          <td class="num">+2.41pp</td>
+          <td class="num">9.31%</td>
+          <td class="num">$97,500</td>
+          <td class="num">218</td>
+          <td class="num">2.2</td>
+        </tr>
+        <tr>
+          <td>50% Collar</td>
+          <td class="num">-7.61%</td>
+          <td class="num">+3.54pp</td>
+          <td class="num">7.02%</td>
+          <td class="num">$162,500</td>
+          <td class="num">363</td>
+          <td class="num">3.6</td>
+        </tr>
+        <tr>
+          <td>Full 100% Collar</td>
+          <td class="num">-6.28%</td>
+          <td class="num">+4.87pp</td>
+          <td class="num">2.81%</td>
+          <td class="num">$325,000</td>
+          <td class="num">725</td>
+          <td class="num">7.3</td>
+        </tr></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="card-h">SAA 3%</div>
+      <div class="card-sub">Post-trade MSTR weight <b>18.50%</b>
+        ($413,558 notional) &mdash; the full position available to collar. &middot; Tracking Error (dashboard) <b>4.63%</b> (unaffected by the collar)</div>
+      <table>
+        <thead><tr><th>Scenario</th><th>Active CVaR</th><th>vs. no collar</th><th>Scenario TE</th>
+          <th>Notional collared</th><th>Shares collared</th><th>Contracts</th></tr></thead>
+        <tbody>
+        <tr>
+          <td>No Collar</td>
+          <td class="num">-14.10%</td>
+          <td class="num">+0.00pp</td>
+          <td class="num">16.24%</td>
+          <td class="num">$0</td>
+          <td class="num">0</td>
+          <td class="num">0.0</td>
+        </tr>
+        <tr>
+          <td>30% Collar</td>
+          <td class="num">-10.63%</td>
+          <td class="num">+3.47pp</td>
+          <td class="num">11.69%</td>
+          <td class="num">$124,067</td>
+          <td class="num">277</td>
+          <td class="num">2.8</td>
+        </tr>
+        <tr>
+          <td>50% Collar</td>
+          <td class="num">-8.84%</td>
+          <td class="num">+5.25pp</td>
+          <td class="num">8.72%</td>
+          <td class="num">$206,779</td>
+          <td class="num">461</td>
+          <td class="num">4.6</td>
+        </tr>
+        <tr>
+          <td>Full 100% Collar</td>
+          <td class="num">-7.05%</td>
+          <td class="num">+7.05pp</td>
+          <td class="num">3.04%</td>
+          <td class="num">$413,558</td>
+          <td class="num">923</td>
+          <td class="num">9.2</td>
+        </tr></tbody>
+      </table>
+    </div>
+
+  <div class="footnote">
+    Methodology: one collar struck per 12-month CVaR scenario window (not rolled monthly), zero-cost costless clip
+    (no Black-Scholes / implied-vol premium modeled), only MSTR's scenario row is touched &mdash; every other ticker's
+    returns and every path's post-trade weights (<code>Proposed_Weight</code> from each
+    <code>trade_proposals_path*.csv</code>) are exactly what <code>optimize_tax_cvar_mvo.py</code> already produced.
+    Strikes are off MSTR's current implied price (Market_Value / Quantity); shares/contracts are sized off each
+    path's <em>post-trade</em> MSTR notional, not today's full pre-trade position. Generated by
+    <code>generate_collar_html.py</code> in <code>portfolio-benchmarking/demos/collar-strategy/</code>.
+  </div>
+
+<script>
+new Chart(document.getElementById('cvarChart'), {
+  type: 'bar',
+  data: {
+    labels: ["Current", "Path C", "Path D", "SAA target", "SAA 3%"],
+    datasets: [
+        {label:'No Collar', backgroundColor:'#8a8f98', borderRadius:4, data:[-22.9631,-7.7065,-15.5128,-11.1521,-14.0955]},
+        {label:'30% Collar', backgroundColor:'#f2a341', borderRadius:4, data:[-17.2224,-7.2005,-11.7043,-8.7404,-10.6280]},
+        {label:'50% Collar', backgroundColor:'#4c8bf5', borderRadius:4, data:[-13.6302,-6.8631,-9.5366,-7.6121,-8.8423]},
+        {label:'Full 100% Collar', backgroundColor:'#2fae62', borderRadius:4, data:[-8.6499,-6.8954,-7.4829,-6.2821,-7.0455]}
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'top', labels: { color: '#e6e9ef', boxWidth: 10, padding: 14 } },
+      tooltip: { callbacks: { label: c => c.dataset.label + ': ' + c.raw.toFixed(2) + '%' } }
+    },
+    scales: {
+      y: { ticks: { color: '#9aa3b2', callback: v => v.toFixed(0) + '%' }, grid: { color: '#2a2f3a' } },
+      x: { ticks: { color: '#9aa3b2' }, grid: { display: false } }
+    }
+  }
+});
+
+new Chart(document.getElementById('teChart'), {
+  data: {
+    labels: ["Current", "Path C", "Path D", "SAA target", "SAA 3%"],
+    datasets: [
+        {type:'bar', label:'Scenario TE (No Collar)', backgroundColor:'#8a8f98', borderRadius:4, data:[25.4654,7.7289,17.7188,12.8569,16.2420]},
+        {type:'bar', label:'Scenario TE (30% Collar)', backgroundColor:'#f2a341', borderRadius:4, data:[18.2505,5.7945,12.7135,9.3136,11.6913]},
+        {type:'bar', label:'Scenario TE (50% Collar)', backgroundColor:'#4c8bf5', borderRadius:4, data:[13.5094,4.6377,9.4517,7.0211,8.7239]},
+        {type:'bar', label:'Scenario TE (Full 100% Collar)', backgroundColor:'#2fae62', borderRadius:4, data:[3.8714,3.1847,3.3109,2.8119,3.0386]},
+        {type:'line', label:'Tracking Error (dashboard, fixed)', borderColor:'#7c5cff',
+          backgroundColor:'#7c5cff', borderWidth:2, pointRadius:4, fill:false, tension:0,
+          data:[23.0527,8.8044,16.7631,3.9264,4.6343]}
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'top', labels: { color: '#e6e9ef', boxWidth: 10, padding: 14, font:{size:10} } },
+      tooltip: { callbacks: { label: c => c.dataset.label + ': ' + c.raw.toFixed(2) + '%' } }
+    },
+    scales: {
+      y: { ticks: { color: '#9aa3b2', callback: v => v.toFixed(0) + '%' }, grid: { color: '#2a2f3a' } },
+      x: { ticks: { color: '#9aa3b2' }, grid: { display: false } }
+    }
+  }
+});
+</script>
+</body>
+</html>

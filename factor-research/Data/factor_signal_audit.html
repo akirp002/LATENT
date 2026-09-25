@@ -1,0 +1,471 @@
+<title>Factor Signal Audit</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --bg: #eef1f4;
+    --surface: #ffffff;
+    --surface-2: #e6eaee;
+    --border: #d8dee4;
+    --text: #161b22;
+    --text-dim: #5a6574;
+    --accent: #a4691f;
+    --accent-soft: #f2e3cd;
+    --pos: #1f7a54;
+    --pos-soft: #e2f1e9;
+    --neg: #b23f30;
+    --neg-soft: #fbe7e3;
+    --neutral: #6b7480;
+    --shadow: 0 1px 2px rgba(20,24,30,0.06), 0 8px 24px -12px rgba(20,24,30,0.12);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0c1016;
+      --surface: #131924;
+      --surface-2: #1a2230;
+      --border: #29323f;
+      --text: #e9edf2;
+      --text-dim: #8894a3;
+      --accent: #e0a458;
+      --accent-soft: #3a2e19;
+      --pos: #5fb88f;
+      --pos-soft: #17291f;
+      --neg: #d0685c;
+      --neg-soft: #2c1a17;
+      --neutral: #6c7683;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 32px -16px rgba(0,0,0,0.5);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0c1016;
+    --surface: #131924;
+    --surface-2: #1a2230;
+    --border: #29323f;
+    --text: #e9edf2;
+    --text-dim: #8894a3;
+    --accent: #e0a458;
+    --accent-soft: #3a2e19;
+    --pos: #5fb88f;
+    --pos-soft: #17291f;
+    --neg: #d0685c;
+    --neg-soft: #2c1a17;
+    --neutral: #6c7683;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 32px -16px rgba(0,0,0,0.5);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: var(--accent-soft); }
+
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  header.page {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-bottom: 28px;
+    margin-bottom: 28px;
+    border-bottom: 1px solid var(--border);
+  }
+  .eyebrow {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 11.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 500;
+  }
+  h1 {
+    font-family: "Archivo", ui-sans-serif, sans-serif;
+    font-weight: 800;
+    font-size: clamp(28px, 4vw, 38px);
+    letter-spacing: -0.01em;
+    margin: 0;
+    text-wrap: balance;
+  }
+  .dek {
+    color: var(--text-dim);
+    font-size: 15.5px;
+    max-width: 68ch;
+    margin: 2px 0 0;
+  }
+  .dek code {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.92em;
+    background: var(--surface-2);
+    padding: 0.1em 0.4em;
+    border-radius: 4px;
+    color: var(--text);
+  }
+
+  /* stat tiles */
+  .tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+  .tile {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+    box-shadow: var(--shadow);
+  }
+  .tile .n {
+    font-family: "IBM Plex Mono", monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 26px;
+    font-weight: 600;
+    line-height: 1.1;
+  }
+  .tile .label {
+    color: var(--text-dim);
+    font-size: 12.5px;
+    margin-top: 5px;
+    letter-spacing: 0.01em;
+  }
+  .tile.robust .n { color: var(--pos); }
+  .tile.emergent .n { color: var(--accent); }
+  .tile.spurious .n { color: var(--neg); }
+  .tile.flip .n { color: var(--neutral); }
+
+  section.block { margin-bottom: 36px; }
+  h2 {
+    font-family: "Archivo", sans-serif;
+    font-weight: 800;
+    font-size: 19px;
+    margin: 0 0 4px;
+    letter-spacing: -0.005em;
+  }
+  .block-note { color: var(--text-dim); font-size: 13.5px; margin: 0 0 16px; max-width: 74ch; }
+
+  /* toolbar */
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 14px;
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    padding: 10px 0;
+    z-index: 5;
+  }
+  .toolbar .grp { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12px;
+    letter-spacing: 0.02em;
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: border-color .15s, color .15s, background .15s;
+  }
+  .chip:hover { border-color: var(--accent); color: var(--text); }
+  .chip.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #1a1206;
+    font-weight: 600;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .chip.active { color: #1a1206; }
+  }
+  .toolbar .sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
+
+  /* table */
+  .tablewrap {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+  }
+  table { border-collapse: collapse; width: 100%; min-width: 920px; }
+  thead th {
+    position: sticky;
+    top: 45px;
+    background: var(--surface-2);
+    text-align: left;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+  }
+  thead th:hover { color: var(--text); }
+  thead th.sorted { color: var(--accent); }
+  thead th .arrow { font-size: 9px; margin-left: 3px; opacity: 0.7; }
+  tbody td {
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13.5px;
+    white-space: nowrap;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: var(--surface-2); }
+  td.num, th.num { text-align: right; font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; }
+  td.factor { font-weight: 500; }
+  td.ff { color: var(--text-dim); font-family: "IBM Plex Mono", monospace; font-size: 12.5px; }
+
+  .tstat { display: inline-flex; align-items: center; gap: 6px; justify-content: flex-end; width: 100%; }
+  .bar-track { width: 46px; height: 6px; border-radius: 3px; background: var(--surface-2); position: relative; overflow: hidden; flex-shrink: 0; }
+  .bar-fill { position: absolute; top: 0; bottom: 0; border-radius: 3px; }
+  .bar-fill.pos { background: var(--pos); left: 50%; }
+  .bar-fill.neg { background: var(--neg); right: 50%; }
+  .bar-fill.ns { background: var(--neutral); opacity: .55; }
+  .bar-mid { position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: var(--border); }
+
+  .badge {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11px;
+    letter-spacing: 0.03em;
+    padding: 3px 8px;
+    border-radius: 5px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .badge.robust { background: var(--pos-soft); color: var(--pos); }
+  .badge.emergent { background: var(--accent-soft); color: var(--accent); }
+  .badge.spurious { background: var(--neg-soft); color: var(--neg); }
+  .badge.flip { background: var(--surface-2); color: var(--text-dim); border: 1px dashed var(--border); }
+  .badge.none { background: transparent; color: var(--text-dim); border: 1px solid var(--border); }
+
+  footer {
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 12.5px;
+    line-height: 1.7;
+  }
+  footer .key { font-family: "IBM Plex Mono", monospace; font-size: 11.5px; }
+  footer strong { color: var(--text); font-weight: 600; }
+
+  @media (max-width: 640px) {
+    .wrap { padding: 24px 16px 60px; }
+    thead th { top: 0; }
+  }
+</style>
+
+<div class="wrap">
+  <header class="page">
+    <div class="eyebrow">Macro-Factor Model &middot; Step 2 diagnostic</div>
+    <h1>Factor Signal Audit</h1>
+    <p class="dek">Every macro PCA factor regressed against each Fama-French factor two ways &mdash; alone (univariate, HAC/Newey&ndash;West errors), and jointly inside the VARX(1) &mdash; to see which relationships are real and which were riding on correlation with something else. <code>244 monthly obs, 2006-03 &rarr; 2026-06</code></p>
+  </header>
+
+  <div class="tiles" id="tiles"></div>
+
+  <section class="block">
+    <h2>Every macro &times; FF factor pair</h2>
+    <p class="block-note">Click a column header to sort. <strong>t</strong> columns carry HAC (univariate) or VARX (multivariate) t-stats; bars show magnitude and sign, capped at |t| = 9.5. A pair is called <em>significant</em> at |t| &ge; 1.645 (10%).</p>
+
+    <div class="toolbar">
+      <div class="grp" id="ff-filters"></div>
+      <div class="sep"></div>
+      <div class="grp" id="status-filters"></div>
+    </div>
+
+    <div class="tablewrap">
+      <table id="tbl">
+        <thead>
+          <tr>
+            <th data-key="macro">Macro factor</th>
+            <th data-key="ff">FF factor</th>
+            <th class="num" data-key="ub">Uni &beta;</th>
+            <th class="num" data-key="ut">Uni t</th>
+            <th class="num" data-key="vb">VAR &beta;</th>
+            <th class="num" data-key="vt">VAR t</th>
+            <th data-key="status">Status</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    <p><span class="key">Status key</span> &mdash;
+      <strong>robust</strong>: significant in both, same sign &middot;
+      <strong>emergent</strong>: only significant once the VAR controls for the other factors (masked univariately) &middot;
+      <strong>spurious</strong>: significant alone, but the signal is absorbed by correlated factors once the VAR controls for them &middot;
+      <strong>sign flip</strong>: coefficient changes sign between the two specifications &middot;
+      <strong>&mdash;</strong>: not significant either way.
+    </p>
+    <p>Univariate: OLS with HAC (Newey&ndash;West) covariance, maxlags = floor(4&middot;(T/100)^(2/9)) = 4. Multivariate: VARX(1) chosen by AIC, contemporaneous macro exogenous regressors, classical OLS covariance. Source: <span class="key">quant_model_macro_2.py</span>.</p>
+  </footer>
+</div>
+
+<script>
+  const rows = [
+    ["US_Growth_Factor","Mkt-RF",0.2550,0.530,0.1446,0.723],
+    ["US_Growth_Factor","SMB",0.0468,0.530,0.0460,0.295],
+    ["US_Growth_Factor","HML",0.1860,1.095,-0.0109,-0.058],
+    ["US_Growth_Factor","RMW",-0.1213,-1.851,-0.1352,-1.132],
+    ["US_Growth_Factor","CMA",0.0624,0.990,0.0716,0.592],
+    ["Global_Growth_Factor","Mkt-RF",0.3199,1.037,0.3686,1.699],
+    ["Global_Growth_Factor","SMB",-0.0833,-0.508,-0.2173,-1.285],
+    ["Global_Growth_Factor","HML",-0.3866,-1.436,-0.3895,-1.906],
+    ["Global_Growth_Factor","RMW",-0.1457,-1.164,-0.1355,-1.045],
+    ["Global_Growth_Factor","CMA",-0.0392,-0.310,-0.0577,-0.440],
+    ["Inflation_Factor","Mkt-RF",0.0129,0.038,-0.2859,-1.504],
+    ["Inflation_Factor","SMB",-0.0924,-0.799,-0.1665,-1.124],
+    ["Inflation_Factor","HML",0.3866,2.207,0.1359,0.759],
+    ["Inflation_Factor","RMW",0.0929,0.674,0.1511,1.331],
+    ["Inflation_Factor","CMA",0.0838,0.577,0.0896,0.780],
+    ["Rates_Yields_Factor","Mkt-RF",-0.1465,-1.047,-0.1735,-1.121],
+    ["Rates_Yields_Factor","SMB",-0.0200,-0.194,-0.0941,-0.780],
+    ["Rates_Yields_Factor","HML",0.1351,0.952,0.2059,1.413],
+    ["Rates_Yields_Factor","RMW",-0.0300,-0.361,-0.0441,-0.477],
+    ["Rates_Yields_Factor","CMA",0.0018,0.029,0.0989,1.057],
+    ["US_Monetary_Policy_Factor","Mkt-RF",-0.1845,-0.348,0.5036,2.050],
+    ["US_Monetary_Policy_Factor","SMB",0.0578,0.393,0.1140,0.595],
+    ["US_Monetary_Policy_Factor","HML",-0.1667,-0.598,0.2719,1.175],
+    ["US_Monetary_Policy_Factor","RMW",0.1343,1.384,0.0182,0.124],
+    ["US_Monetary_Policy_Factor","CMA",0.0737,0.680,0.1049,0.707],
+    ["Global_Monetary_Policy_Factor","Mkt-RF",-0.4882,-1.816,-0.0996,-0.461],
+    ["Global_Monetary_Policy_Factor","SMB",0.0320,0.264,0.1879,1.116],
+    ["Global_Monetary_Policy_Factor","HML",-0.0813,-0.516,-0.1292,-0.635],
+    ["Global_Monetary_Policy_Factor","RMW",0.1340,1.448,0.1179,0.914],
+    ["Global_Monetary_Policy_Factor","CMA",-0.0782,-0.870,-0.1349,-1.033],
+    ["Currency_Factor","Mkt-RF",-1.5357,-9.248,-1.2839,-9.048],
+    ["Currency_Factor","SMB",-0.2251,-2.119,-0.1935,-1.750],
+    ["Currency_Factor","HML",-0.2671,-1.799,-0.0968,-0.724],
+    ["Currency_Factor","RMW",0.0954,1.154,0.0866,1.021],
+    ["Currency_Factor","CMA",0.0283,0.449,0.0109,0.127],
+    ["Credit_Risk_Factor","Mkt-RF",-1.1449,-2.932,-1.1635,-5.320],
+    ["Credit_Risk_Factor","SMB",-0.0221,-0.155,0.1305,0.766],
+    ["Credit_Risk_Factor","HML",-0.3645,-1.598,-0.1300,-0.631],
+    ["Credit_Risk_Factor","RMW",0.1989,1.723,0.1182,0.905],
+    ["Credit_Risk_Factor","CMA",0.1221,1.325,0.2106,1.593],
+    ["Commodities_Factor","Mkt-RF",1.4603,4.269,0.6487,2.794],
+    ["Commodities_Factor","SMB",0.4089,2.404,0.4321,2.387],
+    ["Commodities_Factor","HML",0.7057,2.984,0.6142,2.809],
+    ["Commodities_Factor","RMW",-0.1218,-0.911,-0.0422,-0.304],
+    ["Commodities_Factor","CMA",0.0440,0.341,0.0170,0.121],
+  ].map(([macro, ff, ub, ut, vb, vt]) => {
+    const SIG = 1.645;
+    const uSig = Math.abs(ut) >= SIG;
+    const vSig = Math.abs(vt) >= SIG;
+    const sameSign = Math.sign(ub) === Math.sign(vb);
+    let status;
+    if (!sameSign && (uSig || vSig)) status = "flip";
+    else if (uSig && vSig) status = "robust";
+    else if (!uSig && vSig) status = "emergent";
+    else if (uSig && !vSig) status = "spurious";
+    else status = "none";
+    return { macro, ff, ub, ut, vb, vt, status };
+  });
+
+  const STATUS_LABEL = { robust: "robust", emergent: "emergent", spurious: "spurious", flip: "sign flip", none: "—" };
+  const FF_ORDER = ["Mkt-RF","SMB","HML","RMW","CMA"];
+
+  const tilesEl = document.getElementById("tiles");
+  const counts = { robust: 0, emergent: 0, spurious: 0, flip: 0 };
+  rows.forEach(r => { if (counts[r.status] !== undefined) counts[r.status]++; });
+  const tileDefs = [
+    ["robust", "Robust", counts.robust, "Significant in both, same sign"],
+    ["emergent", "Emergent", counts.emergent, "Only significant once other factors are controlled for"],
+    ["spurious", "Spurious", counts.spurious, "Significant alone; absorbed by correlated factors in the VAR"],
+    ["flip", "Sign flip", counts.flip, "Coefficient sign reverses between specifications"],
+  ];
+  tilesEl.innerHTML = tileDefs.map(([cls, label, n, sub]) =>
+    `<div class="tile ${cls}"><div class="n">${n}</div><div class="label">${label} &middot; ${sub}</div></div>`
+  ).join("");
+
+  let ffFilter = "All";
+  let statusFilter = "All";
+  let sortKey = "ut";
+  let sortDir = -1; // by |value| desc initially, handled specially for ut
+
+  const ffFiltersEl = document.getElementById("ff-filters");
+  const statusFiltersEl = document.getElementById("status-filters");
+
+  function chip(label, active, onClick) {
+    const el = document.createElement("div");
+    el.className = "chip" + (active ? " active" : "");
+    el.textContent = label;
+    el.addEventListener("click", onClick);
+    return el;
+  }
+
+  function renderFilters() {
+    ffFiltersEl.innerHTML = "";
+    ["All", ...FF_ORDER].forEach(f => {
+      ffFiltersEl.appendChild(chip(f, ffFilter === f, () => { ffFilter = f; renderFilters(); renderTable(); }));
+    });
+    statusFiltersEl.innerHTML = "";
+    ["All", "robust", "emergent", "spurious", "flip"].forEach(s => {
+      statusFiltersEl.appendChild(chip(s === "All" ? "All statuses" : STATUS_LABEL[s], statusFilter === s, () => { statusFilter = s; renderFilters(); renderTable(); }));
+    });
+  }
+
+  function fmtBeta(v) { return (v >= 0 ? "+" : "") + v.toFixed(3); }
+  function fmtT(v) { return (v >= 0 ? "+" : "") + v.toFixed(2); }
+
+  function tBar(v) {
+    const cap = 9.5;
+    const pct = Math.min(Math.abs(v) / cap, 1) * 50;
+    const cls = Math.abs(v) < 1.645 ? "ns" : (v >= 0 ? "pos" : "neg");
+    const style = v >= 0 ? `left:50%;width:${pct}%` : `right:50%;width:${pct}%`;
+    return `<span class="tstat"><span class="bar-track"><span class="bar-mid"></span><span class="bar-fill ${cls}" style="${style}"></span></span>${fmtT(v)}</span>`;
+  }
+
+  const tbody = document.getElementById("tbody");
+
+  function renderTable() {
+    let data = rows.filter(r => (ffFilter === "All" || r.ff === ffFilter) && (statusFilter === "All" || r.status === statusFilter));
+    data = data.slice().sort((a, b) => {
+      let av = a[sortKey], bv = b[sortKey];
+      if (sortKey === "status") { av = STATUS_LABEL[av]; bv = STATUS_LABEL[bv]; }
+      if (typeof av === "string") return av.localeCompare(bv) * sortDir;
+      return (av - bv) * sortDir;
+    });
+    tbody.innerHTML = data.map(r => `
+      <tr>
+        <td class="factor">${r.macro.replace(/_/g, " ")}</td>
+        <td class="ff">${r.ff}</td>
+        <td class="num">${fmtBeta(r.ub)}</td>
+        <td class="num">${tBar(r.ut)}</td>
+        <td class="num">${fmtBeta(r.vb)}</td>
+        <td class="num">${tBar(r.vt)}</td>
+        <td><span class="badge ${r.status}">${STATUS_LABEL[r.status]}</span></td>
+      </tr>
+    `).join("");
+  }
+
+  document.querySelectorAll("thead th").forEach(th => {
+    th.addEventListener("click", () => {
+      const key = th.dataset.key;
+      if (sortKey === key) sortDir *= -1; else { sortKey = key; sortDir = -1; }
+      document.querySelectorAll("thead th").forEach(t => { t.classList.remove("sorted"); t.querySelector(".arrow")?.remove(); });
+      th.classList.add("sorted");
+      const arrow = document.createElement("span");
+      arrow.className = "arrow";
+      arrow.textContent = sortDir === 1 ? "↑" : "↓";
+      th.appendChild(arrow);
+      renderTable();
+    });
+  });
+
+  renderFilters();
+  renderTable();
+</script>

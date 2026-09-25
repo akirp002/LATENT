@@ -1,0 +1,687 @@
+<title>Asset Class Factor Audit</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --bg: #eef1f4;
+    --surface: #ffffff;
+    --surface-2: #e6eaee;
+    --border: #d8dee4;
+    --text: #161b22;
+    --text-dim: #5a6574;
+    --accent: #a4691f;
+    --accent-soft: #f2e3cd;
+    --pos: #1f7a54;
+    --pos-soft: #e2f1e9;
+    --neg: #b23f30;
+    --neg-soft: #fbe7e3;
+    --neutral: #6b7480;
+    --shadow: 0 1px 2px rgba(20,24,30,0.06), 0 8px 24px -12px rgba(20,24,30,0.12);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0c1016;
+      --surface: #131924;
+      --surface-2: #1a2230;
+      --border: #29323f;
+      --text: #e9edf2;
+      --text-dim: #8894a3;
+      --accent: #e0a458;
+      --accent-soft: #3a2e19;
+      --pos: #5fb88f;
+      --pos-soft: #17291f;
+      --neg: #d0685c;
+      --neg-soft: #2c1a17;
+      --neutral: #6c7683;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 32px -16px rgba(0,0,0,0.5);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0c1016;
+    --surface: #131924;
+    --surface-2: #1a2230;
+    --border: #29323f;
+    --text: #e9edf2;
+    --text-dim: #8894a3;
+    --accent: #e0a458;
+    --accent-soft: #3a2e19;
+    --pos: #5fb88f;
+    --pos-soft: #17291f;
+    --neg: #d0685c;
+    --neg-soft: #2c1a17;
+    --neutral: #6c7683;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 32px -16px rgba(0,0,0,0.5);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: var(--accent-soft); }
+
+  .wrap { max-width: 1220px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  header.page {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-bottom: 28px;
+    margin-bottom: 28px;
+    border-bottom: 1px solid var(--border);
+  }
+  .eyebrow {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 11.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 500;
+  }
+  h1 {
+    font-family: "Archivo", ui-sans-serif, sans-serif;
+    font-weight: 800;
+    font-size: clamp(28px, 4vw, 38px);
+    letter-spacing: -0.01em;
+    margin: 0;
+    text-wrap: balance;
+  }
+  .dek {
+    color: var(--text-dim);
+    font-size: 15.5px;
+    max-width: 72ch;
+    margin: 2px 0 0;
+  }
+  .dek code {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.92em;
+    background: var(--surface-2);
+    padding: 0.1em 0.4em;
+    border-radius: 4px;
+    color: var(--text);
+  }
+
+  .tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+  .tile {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+    box-shadow: var(--shadow);
+  }
+  .tile .n {
+    font-family: "IBM Plex Mono", monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 26px;
+    font-weight: 600;
+    line-height: 1.1;
+  }
+  .tile .label { color: var(--text-dim); font-size: 12.5px; margin-top: 5px; letter-spacing: 0.01em; }
+  .tile.robust .n { color: var(--pos); }
+  .tile.emergent .n { color: var(--accent); }
+  .tile.spurious .n { color: var(--neg); }
+  .tile.flip .n { color: var(--neutral); }
+
+  section.block { margin-bottom: 36px; }
+  h2 { font-family: "Archivo", sans-serif; font-weight: 800; font-size: 19px; margin: 0 0 4px; letter-spacing: -0.005em; }
+  .block-note { color: var(--text-dim); font-size: 13.5px; margin: 0 0 16px; max-width: 78ch; }
+
+  /* alpha strip */
+  .alpha-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 8px;
+  }
+  .alpha-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .alpha-card .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .alpha-card .name { font-weight: 500; font-size: 13px; }
+  .alpha-card .val {
+    font-family: "IBM Plex Mono", monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 13px;
+  }
+  .alpha-card .val.sig-pos { color: var(--pos); font-weight: 600; }
+  .alpha-card .val.sig-neg { color: var(--neg); font-weight: 600; }
+  .alpha-card .val.ns { color: var(--text-dim); }
+  .alpha-bar-track { height: 5px; border-radius: 3px; background: var(--surface-2); position: relative; overflow: hidden; }
+  .alpha-bar-fill { position: absolute; top: 0; bottom: 0; border-radius: 3px; }
+  .alpha-bar-fill.pos { background: var(--pos); left: 50%; }
+  .alpha-bar-fill.neg { background: var(--neg); right: 50%; }
+  .alpha-bar-fill.ns { background: var(--neutral); opacity: .5; }
+  .alpha-bar-mid { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: var(--border); }
+
+  /* toolbar */
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 14px;
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    padding: 10px 0;
+    z-index: 5;
+    row-gap: 8px;
+  }
+  .toolbar .grp { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12px;
+    letter-spacing: 0.02em;
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: border-color .15s, color .15s, background .15s;
+  }
+  .chip:hover { border-color: var(--accent); color: var(--text); }
+  .chip.active { background: var(--accent); border-color: var(--accent); color: #1a1206; font-weight: 600; }
+  .toolbar .sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
+  .count-note { font-family: "IBM Plex Mono", monospace; font-size: 11.5px; color: var(--text-dim); margin-left: auto; white-space: nowrap; }
+
+  .tablewrap {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    max-height: 640px;
+    overflow-y: auto;
+  }
+  table { border-collapse: collapse; width: 100%; min-width: 980px; }
+  thead th {
+    position: sticky;
+    top: 0;
+    background: var(--surface-2);
+    text-align: left;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+    z-index: 2;
+  }
+  thead th:hover { color: var(--text); }
+  thead th.sorted { color: var(--accent); }
+  thead th .arrow { font-size: 9px; margin-left: 3px; opacity: 0.7; }
+  tbody td {
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13.5px;
+    white-space: nowrap;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: var(--surface-2); }
+  td.num, th.num { text-align: right; font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; }
+  td.factor { font-weight: 500; }
+  td.group { color: var(--text-dim); font-size: 12px; }
+  td.ff { color: var(--text-dim); font-family: "IBM Plex Mono", monospace; font-size: 12.5px; }
+
+  .tstat { display: inline-flex; align-items: center; gap: 6px; justify-content: flex-end; width: 100%; }
+  .bar-track { width: 46px; height: 6px; border-radius: 3px; background: var(--surface-2); position: relative; overflow: hidden; flex-shrink: 0; }
+  .bar-fill { position: absolute; top: 0; bottom: 0; border-radius: 3px; }
+  .bar-fill.pos { background: var(--pos); left: 50%; }
+  .bar-fill.neg { background: var(--neg); right: 50%; }
+  .bar-fill.ns { background: var(--neutral); opacity: .55; }
+  .bar-mid { position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: var(--border); }
+
+  .badge {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11px;
+    letter-spacing: 0.03em;
+    padding: 3px 8px;
+    border-radius: 5px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .badge.robust { background: var(--pos-soft); color: var(--pos); }
+  .badge.emergent { background: var(--accent-soft); color: var(--accent); }
+  .badge.spurious { background: var(--neg-soft); color: var(--neg); }
+  .badge.flip { background: var(--surface-2); color: var(--text-dim); border: 1px dashed var(--border); }
+  .badge.none { background: transparent; color: var(--text-dim); border: 1px solid var(--border); }
+
+  footer {
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 12.5px;
+    line-height: 1.7;
+  }
+  footer .key { font-family: "IBM Plex Mono", monospace; font-size: 11.5px; }
+  footer strong { color: var(--text); font-weight: 600; }
+
+  @media (max-width: 640px) {
+    .wrap { padding: 24px 16px 60px; }
+  }
+</style>
+
+<div class="wrap">
+  <header class="page">
+    <div class="eyebrow">Macro-Factor Model &middot; Step 3 diagnostic</div>
+    <h1>Asset Class Factor Audit</h1>
+    <p class="dek">33 Yahoo Finance asset-class monthly return series, each regressed on the Fama-French 5 factors two ways &mdash; alone (univariate, HAC/Newey&ndash;West errors), and jointly as a standard FF5 loading regression &mdash; to see which factor exposures hold up once the others are controlled for. Dependent variable is excess return (<code>asset &minus; RF</code>); sample length varies by asset (<code>152&ndash;246 obs</code>) since each series starts at a different date.</p>
+  </header>
+
+  <div class="tiles" id="tiles"></div>
+
+  <section class="block">
+    <h2>Alpha, multivariate FF5</h2>
+    <p class="block-note">Intercept from the 5-factor regression &mdash; return left over after the factor exposures are priced in. Bold = |t| &ge; 1.645. Sorted by t-stat.</p>
+    <div class="alpha-grid" id="alpha-grid"></div>
+  </section>
+
+  <section class="block">
+    <h2>Every asset &times; FF factor pair</h2>
+    <p class="block-note">Click a column header to sort. <strong>t</strong> columns carry HAC (univariate) or multivariate FF5 t-stats; bars show magnitude and sign, capped at |t| = 40 (Mkt-RF loadings run far higher for broad-market proxies &mdash; watch the number, not just the bar). A pair is <em>significant</em> at |t| &ge; 1.645 (10%).</p>
+
+    <div class="toolbar">
+      <div class="grp" id="group-filters"></div>
+      <div class="sep"></div>
+      <div class="grp" id="ff-filters"></div>
+      <div class="sep"></div>
+      <div class="grp" id="status-filters"></div>
+      <div class="count-note" id="count-note"></div>
+    </div>
+
+    <div class="tablewrap">
+      <table id="tbl">
+        <thead>
+          <tr>
+            <th data-key="asset">Asset</th>
+            <th data-key="group">Group</th>
+            <th data-key="ff">FF factor</th>
+            <th class="num" data-key="ub">Uni &beta;</th>
+            <th class="num" data-key="ut">Uni t</th>
+            <th class="num" data-key="vb">FF5 &beta;</th>
+            <th class="num" data-key="vt">FF5 t</th>
+            <th class="num" data-key="n">N</th>
+            <th data-key="status">Status</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    <p><span class="key">Status key</span> &mdash;
+      <strong>robust</strong>: significant in both, same sign &middot;
+      <strong>emergent</strong>: only significant once the other four factors are controlled for &middot;
+      <strong>spurious</strong>: significant alone, but the signal is absorbed by correlated factors once the others are in the regression &middot;
+      <strong>sign flip</strong>: coefficient changes sign between the two specifications &middot;
+      <strong>&mdash;</strong>: not significant either way.
+    </p>
+    <p>Univariate and multivariate: OLS on excess returns (asset &minus; RF) with HAC (Newey&ndash;West) covariance, per-asset maxlags = floor(4&middot;(T/100)^(2/9)). Multivariate includes all five FF factors plus a constant (Alpha) in one regression per asset. Source: <span class="key">quant_model_macro_3.py</span>.</p>
+  </footer>
+</div>
+
+<script>
+  const GROUP = {
+    US_LC_Blend: "US Equity", US_LC_Value: "US Equity", US_LC_Growth: "US Equity",
+    US_MC_Blend: "US Equity", US_MC_Value: "US Equity", US_MC_Growth: "US Equity",
+    US_SC_Blend: "US Equity", US_SC_Value: "US Equity", US_SC_Growth: "US Equity",
+    Intl_LC_Blend: "Intl Equity", Intl_LC_Value: "Intl Equity", Intl_LC_Growth: "Intl Equity",
+    Intl_MidSmall_Blend: "Intl Equity", Intl_Small_Value: "Intl Equity",
+    EM_Broad: "EM Equity", EM_Value: "EM Equity", EM_Small: "EM Equity",
+    US_IG_Short: "US Credit", US_IG_Intermediate: "US Credit", US_IG_Long: "US Credit",
+    US_HY_Short: "US Credit", US_HY_Broad: "US Credit",
+    EM_Debt_USD_Broad: "EM Debt", EM_Debt_Local_Broad: "EM Debt", EM_Debt_Local_Alt: "EM Debt",
+    UST_Short_1_3Y: "US Rates", UST_Intermediate_7_10Y: "US Rates", UST_Long_20Y_Plus: "US Rates", UST_TIPS: "US Rates",
+    US_REIT: "Real Assets", Intl_REIT: "Real Assets", Broad_Commodities: "Real Assets", Gold: "Real Assets",
+  };
+
+  // [asset, ff, uniBeta, uniT, multiBeta, multiT, N]
+  const raw = [
+    ["US_LC_Blend","Mkt-RF",0.9646,145.170,0.9935,187.214,246],
+    ["US_LC_Blend","SMB",0.4439,3.813,-0.1236,-16.390,246],
+    ["US_LC_Blend","HML",0.1620,1.208,0.0260,2.905,246],
+    ["US_LC_Blend","RMW",-0.3516,-1.776,0.0479,3.334,246],
+    ["US_LC_Blend","CMA",-0.2971,-2.187,0.0225,1.906,246],
+    ["US_LC_Value","Mkt-RF",0.8987,28.528,0.9074,43.978,246],
+    ["US_LC_Value","SMB",0.5653,5.038,-0.0716,-2.263,246],
+    ["US_LC_Value","HML",0.5053,4.247,0.3036,9.494,246],
+    ["US_LC_Value","RMW",-0.2746,-1.380,0.0679,1.911,246],
+    ["US_LC_Value","CMA",0.1859,1.474,0.2014,3.738,246],
+    ["US_LC_Growth","Mkt-RF",1.0446,37.127,1.0793,73.649,246],
+    ["US_LC_Growth","SMB",0.3821,2.850,-0.1195,-3.986,246],
+    ["US_LC_Growth","HML",-0.1745,-1.128,-0.2550,-9.909,246],
+    ["US_LC_Growth","RMW",-0.4784,-2.297,0.0034,0.102,246],
+    ["US_LC_Growth","CMA",-0.7956,-5.131,-0.1703,-3.912,246],
+    ["US_MC_Blend","Mkt-RF",1.0884,35.608,0.9950,38.862,246],
+    ["US_MC_Blend","SMB",1.0674,8.549,0.4951,16.600,246],
+    ["US_MC_Blend","HML",0.4070,2.719,0.0994,2.323,246],
+    ["US_MC_Blend","RMW",-0.4963,-2.159,0.1568,3.837,246],
+    ["US_MC_Blend","CMA",-0.1571,-0.923,0.0139,0.222,246],
+    ["US_MC_Value","Mkt-RF",1.1110,26.441,0.9952,37.510,246],
+    ["US_MC_Value","SMB",1.1976,9.043,0.5636,15.082,246],
+    ["US_MC_Value","HML",0.6129,4.050,0.2763,4.720,246],
+    ["US_MC_Value","RMW",-0.4620,-1.878,0.2083,4.747,246],
+    ["US_MC_Value","CMA",0.0521,0.311,0.0384,0.513,246],
+    ["US_MC_Growth","Mkt-RF",1.0694,36.274,0.9955,32.103,246],
+    ["US_MC_Growth","SMB",0.9531,7.618,0.4429,12.062,246],
+    ["US_MC_Growth","HML",0.2088,1.363,-0.0729,-1.806,246],
+    ["US_MC_Growth","RMW",-0.5276,-2.416,0.1160,2.107,246],
+    ["US_MC_Growth","CMA",-0.3640,-2.026,-0.0159,-0.216,246],
+    ["US_SC_Blend","Mkt-RF",1.1340,31.260,0.9541,71.843,246],
+    ["US_SC_Blend","SMB",1.4698,12.608,0.8862,32.418,246],
+    ["US_SC_Blend","HML",0.5809,3.426,0.1656,8.703,246],
+    ["US_SC_Blend","RMW",-0.6622,-2.782,0.1281,3.220,246],
+    ["US_SC_Blend","CMA",-0.0298,-0.159,0.0293,0.923,246],
+    ["US_SC_Value","Mkt-RF",1.1661,24.032,0.9705,73.038,246],
+    ["US_SC_Value","SMB",1.5701,12.351,0.9132,31.718,246],
+    ["US_SC_Value","HML",0.7652,4.436,0.3293,13.091,246],
+    ["US_SC_Value","RMW",-0.6507,-2.616,0.1471,4.299,246],
+    ["US_SC_Value","CMA",0.1552,0.822,0.0571,1.528,246],
+    ["US_SC_Growth","Mkt-RF",1.1117,36.213,0.9455,46.539,246],
+    ["US_SC_Growth","SMB",1.3823,12.250,0.8671,24.030,246],
+    ["US_SC_Growth","HML",0.4057,2.352,0.0112,0.330,246],
+    ["US_SC_Growth","RMW",-0.6697,-2.899,0.1211,2.009,246],
+    ["US_SC_Growth","CMA",-0.2164,-1.140,-0.0091,-0.166,246],
+    ["Intl_LC_Blend","Mkt-RF",0.9356,19.895,0.9528,20.012,246],
+    ["Intl_LC_Blend","SMB",0.4817,3.619,-0.1307,-1.760,246],
+    ["Intl_LC_Blend","HML",0.3057,2.171,0.1667,2.378,246],
+    ["Intl_LC_Blend","RMW",-0.3560,-1.587,0.0109,0.127,246],
+    ["Intl_LC_Blend","CMA",-0.1213,-0.817,0.0560,0.540,246],
+    ["Intl_LC_Value","Mkt-RF",0.9390,15.100,0.9380,17.612,246],
+    ["Intl_LC_Value","SMB",0.5639,3.685,-0.1379,-1.589,246],
+    ["Intl_LC_Value","HML",0.5398,3.869,0.4015,5.010,246],
+    ["Intl_LC_Value","RMW",-0.3408,-1.490,0.0050,0.052,246],
+    ["Intl_LC_Value","CMA",0.1181,0.811,0.0666,0.580,246],
+    ["Intl_LC_Growth","Mkt-RF",0.9438,22.568,0.9750,21.752,246],
+    ["Intl_LC_Growth","SMB",0.4163,3.252,-0.1159,-1.642,246],
+    ["Intl_LC_Growth","HML",0.0778,0.517,-0.0596,-0.802,246],
+    ["Intl_LC_Growth","RMW",-0.3896,-1.674,0.0070,0.074,246],
+    ["Intl_LC_Growth","CMA",-0.3707,-2.276,0.0305,0.270,246],
+    ["Intl_MidSmall_Blend","Mkt-RF",1.0079,20.152,0.9901,18.743,222],
+    ["Intl_MidSmall_Blend","SMB",0.6559,4.340,0.0473,0.596,222],
+    ["Intl_MidSmall_Blend","HML",0.2831,1.748,0.1109,1.372,222],
+    ["Intl_MidSmall_Blend","RMW",-0.4365,-1.786,0.0298,0.326,222],
+    ["Intl_MidSmall_Blend","CMA",-0.2496,-1.378,-0.0217,-0.177,222],
+    ["Intl_Small_Value","Mkt-RF",0.9418,15.942,0.9203,16.356,240],
+    ["Intl_Small_Value","SMB",0.6249,4.158,0.0146,0.183,240],
+    ["Intl_Small_Value","HML",0.3733,2.391,0.2303,2.819,240],
+    ["Intl_Small_Value","RMW",-0.3766,-1.590,0.0460,0.458,240],
+    ["Intl_Small_Value","CMA",-0.1195,-0.748,-0.0428,-0.363,240],
+    ["EM_Broad","Mkt-RF",0.7639,12.253,0.7892,12.383,164],
+    ["EM_Broad","SMB",0.3469,2.051,-0.0708,-0.682,164],
+    ["EM_Broad","HML",0.1294,0.887,0.1153,0.985,164],
+    ["EM_Broad","RMW",-0.1022,-0.502,-0.0911,-0.728,164],
+    ["EM_Broad","CMA",-0.1018,-0.779,0.1240,0.828,164],
+    ["EM_Value","Mkt-RF",0.8746,13.500,0.8761,14.058,227],
+    ["EM_Value","SMB",0.5500,3.192,-0.0503,-0.510,227],
+    ["EM_Value","HML",0.4186,3.078,0.2558,2.651,227],
+    ["EM_Value","RMW",-0.2764,-1.250,0.0856,0.799,227],
+    ["EM_Value","CMA",0.0339,0.233,0.0821,0.615,227],
+    ["EM_Small","Mkt-RF",0.8661,12.006,0.8714,14.671,178],
+    ["EM_Small","SMB",0.4793,2.516,0.0018,0.020,178],
+    ["EM_Small","HML",0.1601,0.933,0.1402,1.186,178],
+    ["EM_Small","RMW",-0.1542,-0.803,-0.0162,-0.158,178],
+    ["EM_Small","CMA",-0.1890,-1.472,0.0561,0.380,178],
+    ["US_IG_Short","Mkt-RF",0.0823,4.363,0.0811,4.912,199],
+    ["US_IG_Short","SMB",0.0378,1.356,0.0132,0.701,199],
+    ["US_IG_Short","HML",-0.0059,-0.233,-0.0033,-0.119,199],
+    ["US_IG_Short","RMW",0.0235,0.767,0.0571,2.038,199],
+    ["US_IG_Short","CMA",-0.0487,-1.758,-0.0309,-0.715,199],
+    ["US_IG_Intermediate","Mkt-RF",0.1804,4.172,0.1826,4.659,199],
+    ["US_IG_Intermediate","SMB",0.0572,0.915,0.0152,0.361,199],
+    ["US_IG_Intermediate","HML",-0.0525,-0.900,-0.0503,-0.774,199],
+    ["US_IG_Intermediate","RMW",0.0501,0.672,0.1215,1.814,199],
+    ["US_IG_Intermediate","CMA",-0.1340,-2.072,-0.0500,-0.507,199],
+    ["US_IG_Long","Mkt-RF",0.2855,3.869,0.3071,4.317,199],
+    ["US_IG_Long","SMB",0.0245,0.253,-0.0516,-0.668,199],
+    ["US_IG_Long","HML",-0.1309,-1.468,-0.1347,-1.357,199],
+    ["US_IG_Long","RMW",0.0419,0.315,0.1226,1.037,199],
+    ["US_IG_Long","CMA",-0.2153,-1.850,-0.0042,-0.027,199],
+    ["US_HY_Short","Mkt-RF",0.2882,7.837,0.2806,10.464,152],
+    ["US_HY_Short","SMB",0.1767,2.601,0.0271,0.941,152],
+    ["US_HY_Short","HML",0.0863,1.237,0.0998,1.755,152],
+    ["US_HY_Short","RMW",0.0180,0.275,0.0436,1.192,152],
+    ["US_HY_Short","CMA",-0.0556,-1.274,-0.0438,-0.628,152],
+    ["US_HY_Broad","Mkt-RF",0.4711,10.587,0.4518,11.491,230],
+    ["US_HY_Broad","SMB",0.3589,3.403,0.0884,1.228,230],
+    ["US_HY_Broad","HML",0.1510,1.890,0.0596,1.299,230],
+    ["US_HY_Broad","RMW",-0.1809,-1.472,0.0651,1.000,230],
+    ["US_HY_Broad","CMA",-0.1119,-1.254,-0.0352,-0.486,230],
+    ["EM_Debt_USD_Broad","Mkt-RF",0.4226,7.467,0.4356,7.816,222],
+    ["EM_Debt_USD_Broad","SMB",0.2058,1.857,-0.0000,-0.000,222],
+    ["EM_Debt_USD_Broad","HML",0.0706,0.678,0.0177,0.181,222],
+    ["EM_Debt_USD_Broad","RMW",-0.0025,-0.022,0.2038,2.292,222],
+    ["EM_Debt_USD_Broad","CMA",-0.1630,-1.797,-0.0623,-0.455,222],
+    ["EM_Debt_Local_Broad","Mkt-RF",0.4094,8.809,0.4401,10.439,191],
+    ["EM_Debt_Local_Broad","SMB",0.1462,1.299,-0.0900,-1.112,191],
+    ["EM_Debt_Local_Broad","HML",0.0785,0.814,0.0582,0.600,191],
+    ["EM_Debt_Local_Broad","RMW",0.0033,0.028,0.0612,0.714,191],
+    ["EM_Debt_Local_Broad","CMA",-0.0132,-0.145,0.0891,0.707,191],
+    ["EM_Debt_Local_Alt","Mkt-RF",0.3413,6.247,0.3719,8.214,176],
+    ["EM_Debt_Local_Alt","SMB",0.0989,0.883,-0.0984,-1.184,176],
+    ["EM_Debt_Local_Alt","HML",0.0897,0.939,0.0789,0.749,176],
+    ["EM_Debt_Local_Alt","RMW",0.0223,0.205,0.0028,0.034,176],
+    ["EM_Debt_Local_Alt","CMA",0.0120,0.140,0.0989,0.737,176],
+    ["UST_Short_1_3Y","Mkt-RF",-0.0111,-1.116,-0.0066,-0.631,246],
+    ["UST_Short_1_3Y","SMB",-0.0190,-1.644,-0.0041,-0.339,246],
+    ["UST_Short_1_3Y","HML",-0.0168,-1.656,-0.0173,-1.282,246],
+    ["UST_Short_1_3Y","RMW",0.0241,1.726,0.0191,1.231,246],
+    ["UST_Short_1_3Y","CMA",-0.0053,-0.329,0.0064,0.304,246],
+    ["UST_Intermediate_7_10Y","Mkt-RF",-0.0347,-0.848,-0.0013,-0.032,246],
+    ["UST_Intermediate_7_10Y","SMB",-0.1210,-2.294,-0.0323,-0.631,246],
+    ["UST_Intermediate_7_10Y","HML",-0.1512,-3.659,-0.1621,-2.848,246],
+    ["UST_Intermediate_7_10Y","RMW",0.1193,1.644,0.1044,1.380,246],
+    ["UST_Intermediate_7_10Y","CMA",-0.0911,-1.333,0.0506,0.577,246],
+    ["UST_Long_20Y_Plus","Mkt-RF",-0.0840,-0.962,-0.0204,-0.253,246],
+    ["UST_Long_20Y_Plus","SMB",-0.2503,-2.100,-0.0813,-0.781,246],
+    ["UST_Long_20Y_Plus","HML",-0.3213,-3.287,-0.3432,-2.607,246],
+    ["UST_Long_20Y_Plus","RMW",0.1509,0.965,0.1029,0.693,246],
+    ["UST_Long_20Y_Plus","CMA",-0.1868,-1.334,0.1273,0.715,246],
+    ["UST_TIPS","Mkt-RF",0.1192,3.022,0.1302,3.216,190],
+    ["UST_TIPS","SMB",0.0064,0.165,0.0201,0.535,190],
+    ["UST_TIPS","HML",-0.0778,-2.646,-0.1115,-2.792,190],
+    ["UST_TIPS","RMW",0.1024,1.907,0.1511,3.059,190],
+    ["UST_TIPS","CMA",-0.0787,-1.607,0.0478,0.755,190],
+    ["US_REIT","Mkt-RF",1.0291,9.467,0.9753,11.522,246],
+    ["US_REIT","SMB",0.8767,4.081,0.2688,2.184,246],
+    ["US_REIT","HML",0.4923,2.106,0.2471,1.468,246],
+    ["US_REIT","RMW",-0.3272,-1.196,0.2163,1.555,246],
+    ["US_REIT","CMA",-0.0133,-0.070,0.0223,0.114,246],
+    ["Intl_REIT","Mkt-RF",0.7709,12.387,0.7836,13.721,187],
+    ["Intl_REIT","SMB",0.4571,2.732,0.0699,0.775,187],
+    ["Intl_REIT","HML",0.2169,1.313,0.1056,0.754,187],
+    ["Intl_REIT","RMW",-0.0240,-0.114,0.1716,1.336,187],
+    ["Intl_REIT","CMA",-0.0004,-0.003,0.1617,0.940,187],
+    ["Broad_Commodities","Mkt-RF",0.5299,5.176,0.5146,5.164,244],
+    ["Broad_Commodities","SMB",0.3459,2.244,-0.0835,-0.613,244],
+    ["Broad_Commodities","HML",0.4210,3.489,0.4032,3.156,244],
+    ["Broad_Commodities","RMW",-0.0947,-0.458,0.1084,0.539,244],
+    ["Broad_Commodities","CMA",0.1011,0.452,-0.1214,-0.530,244],
+    ["Gold","Mkt-RF",0.0811,1.200,0.1560,2.004,246],
+    ["Gold","SMB",-0.1645,-1.439,-0.0993,-0.755,246],
+    ["Gold","HML",-0.1508,-1.647,-0.1876,-1.364,246],
+    ["Gold","RMW",0.3270,2.174,0.3513,2.268,246],
+    ["Gold","CMA",-0.0955,-0.659,0.0920,0.460,246],
+  ];
+
+  const ALPHA = [
+    ["US_LC_Blend",-0.0235,-1.524,246],["US_LC_Value",-0.0662,-1.197,246],["US_LC_Growth",0.0563,1.134,246],
+    ["US_MC_Blend",-0.0802,-0.977,246],["US_MC_Value",-0.1186,-1.430,246],["US_MC_Growth",-0.0612,-0.593,246],
+    ["US_SC_Blend",-0.0134,-0.244,246],["US_SC_Value",-0.0617,-1.063,246],["US_SC_Growth",0.0138,0.165,246],
+    ["Intl_LC_Blend",-0.3600,-2.187,246],["Intl_LC_Value",-0.3454,-1.848,246],["Intl_LC_Growth",-0.3914,-2.484,246],
+    ["Intl_MidSmall_Blend",-0.4076,-1.839,222],["Intl_Small_Value",-0.2947,-1.349,240],
+    ["EM_Broad",-0.3572,-1.369,164],["EM_Value",-0.3106,-1.247,227],["EM_Small",-0.5341,-2.006,178],
+    ["US_IG_Short",0.0282,0.541,199],["US_IG_Intermediate",0.0282,0.225,199],["US_IG_Long",-0.0585,-0.262,199],
+    ["US_HY_Short",-0.0753,-1.011,152],["US_HY_Broad",-0.0731,-0.641,230],
+    ["EM_Debt_USD_Broad",-0.1077,-0.632,222],["EM_Debt_Local_Broad",-0.4891,-2.500,191],["EM_Debt_Local_Alt",-0.4581,-2.301,176],
+    ["UST_Short_1_3Y",0.0272,0.766,246],["UST_Intermediate_7_10Y",0.1132,0.893,246],["UST_Long_20Y_Plus",0.1492,0.567,246],["UST_TIPS",-0.0577,-0.459,190],
+    ["US_REIT",-0.2552,-1.032,246],["Intl_REIT",-0.5772,-2.392,187],
+    ["Broad_Commodities",-0.2787,-0.700,244],["Gold",0.5612,1.828,246],
+  ];
+
+  const rows = raw.map(([asset, ff, ub, ut, vb, vt, n]) => {
+    const SIG = 1.645;
+    const uSig = Math.abs(ut) >= SIG;
+    const vSig = Math.abs(vt) >= SIG;
+    const sameSign = Math.sign(ub) === Math.sign(vb);
+    let status;
+    if (!sameSign && (uSig || vSig)) status = "flip";
+    else if (uSig && vSig) status = "robust";
+    else if (!uSig && vSig) status = "emergent";
+    else if (uSig && !vSig) status = "spurious";
+    else status = "none";
+    return { asset, group: GROUP[asset] || "Other", ff, ub, ut, vb, vt, n, status };
+  });
+
+  const STATUS_LABEL = { robust: "robust", emergent: "emergent", spurious: "spurious", flip: "sign flip", none: "—" };
+  const FF_ORDER = ["Mkt-RF","SMB","HML","RMW","CMA"];
+  const GROUP_ORDER = ["US Equity","Intl Equity","EM Equity","US Credit","EM Debt","US Rates","Real Assets"];
+
+  // --- tiles ---
+  const tilesEl = document.getElementById("tiles");
+  const counts = { robust: 0, emergent: 0, spurious: 0, flip: 0 };
+  rows.forEach(r => { if (counts[r.status] !== undefined) counts[r.status]++; });
+  const tileDefs = [
+    ["robust", "Robust", counts.robust, "Significant in both, same sign"],
+    ["emergent", "Emergent", counts.emergent, "Only significant once other factors are controlled for"],
+    ["spurious", "Spurious", counts.spurious, "Significant alone; absorbed by correlated factors in FF5"],
+    ["flip", "Sign flip", counts.flip, "Coefficient sign reverses between specifications"],
+  ];
+  tilesEl.innerHTML = tileDefs.map(([cls, label, n, sub]) =>
+    `<div class="tile ${cls}"><div class="n">${n}</div><div class="label">${label} &middot; ${sub}</div></div>`
+  ).join("");
+
+  // --- alpha grid ---
+  const alphaGrid = document.getElementById("alpha-grid");
+  const alphaSorted = ALPHA.slice().sort((a, b) => a[2] - b[2]);
+  const cap = Math.max(...ALPHA.map(a => Math.abs(a[2])));
+  alphaGrid.innerHTML = alphaSorted.map(([asset, beta, t]) => {
+    const sig = Math.abs(t) >= 1.645;
+    const cls = !sig ? "ns" : (t >= 0 ? "sig-pos" : "sig-neg");
+    const barCls = !sig ? "ns" : (t >= 0 ? "pos" : "neg");
+    const pct = Math.min(Math.abs(t) / cap, 1) * 50;
+    const style = t >= 0 ? `left:50%;width:${pct}%` : `right:50%;width:${pct}%`;
+    return `
+      <div class="alpha-card">
+        <div class="top">
+          <span class="name">${asset.replace(/_/g," ")}</span>
+          <span class="val ${cls}">${beta >= 0 ? "+" : ""}${beta.toFixed(2)} <span style="opacity:.65">(t ${t >= 0 ? "+" : ""}${t.toFixed(1)})</span></span>
+        </div>
+        <div class="alpha-bar-track"><div class="alpha-bar-mid"></div><div class="alpha-bar-fill ${barCls}" style="${style}"></div></div>
+      </div>`;
+  }).join("");
+
+  // --- filters ---
+  let groupFilter = "All";
+  let ffFilter = "All";
+  let statusFilter = "All";
+  let sortKey = "ut";
+  let sortDir = -1;
+
+  const groupFiltersEl = document.getElementById("group-filters");
+  const ffFiltersEl = document.getElementById("ff-filters");
+  const statusFiltersEl = document.getElementById("status-filters");
+  const countNote = document.getElementById("count-note");
+
+  function chip(label, active, onClick) {
+    const el = document.createElement("div");
+    el.className = "chip" + (active ? " active" : "");
+    el.textContent = label;
+    el.addEventListener("click", onClick);
+    return el;
+  }
+
+  function renderFilters() {
+    groupFiltersEl.innerHTML = "";
+    ["All", ...GROUP_ORDER].forEach(g => {
+      groupFiltersEl.appendChild(chip(g, groupFilter === g, () => { groupFilter = g; renderFilters(); renderTable(); }));
+    });
+    ffFiltersEl.innerHTML = "";
+    ["All", ...FF_ORDER].forEach(f => {
+      ffFiltersEl.appendChild(chip(f, ffFilter === f, () => { ffFilter = f; renderFilters(); renderTable(); }));
+    });
+    statusFiltersEl.innerHTML = "";
+    ["All", "robust", "emergent", "spurious", "flip"].forEach(s => {
+      statusFiltersEl.appendChild(chip(s === "All" ? "All statuses" : STATUS_LABEL[s], statusFilter === s, () => { statusFilter = s; renderFilters(); renderTable(); }));
+    });
+  }
+
+  function fmtBeta(v) { return (v >= 0 ? "+" : "") + v.toFixed(3); }
+  function fmtT(v) { return (v >= 0 ? "+" : "") + v.toFixed(2); }
+
+  function tBar(v) {
+    const cap = 40;
+    const pct = Math.min(Math.abs(v) / cap, 1) * 50;
+    const cls = Math.abs(v) < 1.645 ? "ns" : (v >= 0 ? "pos" : "neg");
+    const style = v >= 0 ? `left:50%;width:${pct}%` : `right:50%;width:${pct}%`;
+    return `<span class="tstat"><span class="bar-track"><span class="bar-mid"></span><span class="bar-fill ${cls}" style="${style}"></span></span>${fmtT(v)}</span>`;
+  }
+
+  const tbody = document.getElementById("tbody");
+
+  function renderTable() {
+    let data = rows.filter(r =>
+      (groupFilter === "All" || r.group === groupFilter) &&
+      (ffFilter === "All" || r.ff === ffFilter) &&
+      (statusFilter === "All" || r.status === statusFilter)
+    );
+    data = data.slice().sort((a, b) => {
+      let av = a[sortKey], bv = b[sortKey];
+      if (sortKey === "status") { av = STATUS_LABEL[av]; bv = STATUS_LABEL[bv]; }
+      if (typeof av === "string") return av.localeCompare(bv) * sortDir;
+      return (av - bv) * sortDir;
+    });
+    countNote.textContent = `${data.length} of ${rows.length} pairs`;
+    tbody.innerHTML = data.map(r => `
+      <tr>
+        <td class="factor">${r.asset.replace(/_/g, " ")}</td>
+        <td class="group">${r.group}</td>
+        <td class="ff">${r.ff}</td>
+        <td class="num">${fmtBeta(r.ub)}</td>
+        <td class="num">${tBar(r.ut)}</td>
+        <td class="num">${fmtBeta(r.vb)}</td>
+        <td class="num">${tBar(r.vt)}</td>
+        <td class="num">${r.n}</td>
+        <td><span class="badge ${r.status}">${STATUS_LABEL[r.status]}</span></td>
+      </tr>
+    `).join("");
+  }
+
+  document.querySelectorAll("thead th").forEach(th => {
+    th.addEventListener("click", () => {
+      const key = th.dataset.key;
+      if (sortKey === key) sortDir *= -1; else { sortKey = key; sortDir = -1; }
+      document.querySelectorAll("thead th").forEach(t => { t.classList.remove("sorted"); t.querySelector(".arrow")?.remove(); });
+      th.classList.add("sorted");
+      const arrow = document.createElement("span");
+      arrow.className = "arrow";
+      arrow.textContent = sortDir === 1 ? "↑" : "↓";
+      th.appendChild(arrow);
+      renderTable();
+    });
+  });
+
+  renderFilters();
+  renderTable();
+</script>

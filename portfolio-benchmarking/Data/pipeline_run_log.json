@@ -1,0 +1,45 @@
+{
+  "runs": [
+    {
+      "started": "2026-09-24 10:11:20",
+      "interpreter": "/usr/local/opt/python@3.9/bin/python3.9",
+      "steps": [
+        {
+          "step": "ingest",
+          "result": "ok",
+          "seconds": 0.5
+        },
+        {
+          "step": "prices",
+          "result": "ok",
+          "seconds": 2.6
+        },
+        {
+          "step": "benchmark",
+          "result": "ok",
+          "seconds": 0.8
+        },
+        {
+          "step": "optimize",
+          "result": "ok",
+          "seconds": 4.7
+        },
+        {
+          "step": "saa",
+          "result": "ok",
+          "seconds": 2.6
+        },
+        {
+          "step": "attribution",
+          "result": "ok",
+          "seconds": 1.7
+        },
+        {
+          "step": "dashboard",
+          "result": "ok",
+          "seconds": 2.1
+        }
+      ]
+    }
+  ]
+}

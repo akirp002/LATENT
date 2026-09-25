@@ -1,0 +1,21 @@
+flowchart LR
+  FRED[Factor / macro ingestion] --> PANEL[Normalized factor panel]
+  XLSX[(Brokerage workbook)] --> ING[Ingest holdings]
+  ING --> HOLD[Normalized holdings]
+  HOLD --> PRICES[Price history and returns]
+  PANEL --> BENCH[Policy benchmark\nexplicit identity: FF5 Mkt-RF/RMW]
+  PRICES --> BENCH
+  BENCH --> OPT[Tax-aware optimization]
+  OPT --> TE[Tracking error branch\nfactor covariance + residual risk]
+  OPT --> CVAR[CVaR branch\noverlapping 12-month scenarios]
+  TE --> ATTR[Risk attribution]
+  CVAR --> ATTR
+  ATTR --> REPORT[Rebalance report / dashboard]
+  PANEL -.-> DEMO[Demo TE prototype\nsynthetic only]
+  PRICES -.-> COLLAR[Collar what-if analysis\nscenario reuse]
+  DEMO -.-> REPORT
+  COLLAR -.-> REPORT
+  classDef real fill:#d9f2e6,stroke:#19734a
+  classDef demo fill:#fff1cc,stroke:#a66b00
+  class ING,HOLD,PRICES,BENCH,OPT,TE,CVAR,ATTR,REPORT real
+  class DEMO,COLLAR demo

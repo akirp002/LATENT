@@ -1,0 +1,46 @@
+All-Equity SAA Covariance Minimum-Tracking-Error Optimization (SAA_3pct)
+Workbook: /Users/ajay/Codes/LATENT_V2/portfolio-benchmarking/../all_equity_saa_covariance.xlsx
+Policy-target TE: 6.7149% -> 4.6343% (sleeve-only, no proxy-tracking term: 6.6891% -> 4.5805%)
+Tax budget: 3.00% of household value/year (MSTR's own tax counts against this budget, no carve-out)
+Tax cost counting against budget (incl. MSTR): $67,068.00 (3.0000% of household value)
+  of which MSTR's own tax cost: $67,068.00
+SAA turnover penalty lambda: 0.002
+MSTR sale capped at 50% of its current position this run
+Total realized tax cost (both): $67,068.00 (3.0000% of household value)
+One-way turnover: 9.1499%
+
+Ticker-to-sleeve proxies:
+  IEFA: Intl Developed
+  IEMG: Emerging Markets
+  IJJ: US Mid Value
+  IJK: US Mid Growth
+  IJS: US Small Value
+  IJT: US Small Growth
+  ITOT: US Large Growth
+  IWD: US Large Value
+  IWF: US Large Growth
+  MSTR: Single Stock
+  MTUM: US Momentum Factor
+  QUAL: US Quality Factor
+  SCHD: US Dividend
+  SCHH: US Large Value
+  SHV: Near-Cash (SHV)
+  XLB: US Large Value
+
+Proxy-tracking annualized variance by ticker (0 = sleeve's only member, or no history):
+  IEFA: 0.0000  (vol 0.00%)
+  IEMG: 0.0000  (vol 0.00%)
+  IJJ: 0.0000  (vol 0.00%)
+  IJK: 0.0000  (vol 0.00%)
+  IJS: 0.0000  (vol 0.00%)
+  IJT: 0.0000  (vol 0.00%)
+  ITOT: 0.0020  (vol 4.48%)
+  IWD: 0.0040  (vol 6.33%)
+  IWF: 0.0023  (vol 4.81%)
+  MSTR: 0.0000  (vol 0.00%)
+  MTUM: 0.0000  (vol 0.00%)
+  QUAL: 0.0000  (vol 0.00%)
+  SCHD: 0.0000  (vol 0.00%)
+  SCHH: 0.0131  (vol 11.43%)
+  SHV: 0.0000  (vol 0.00%)
+  XLB: 0.0079  (vol 8.89%)
